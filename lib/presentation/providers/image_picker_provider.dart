@@ -1,26 +1,14 @@
-/// Provider para la selección de imagen de una prenda.
-///
-/// Aislado del [GarmentNotifier] para que un fallo en la selección
-/// de imagen no afecte el flujo de guardado (RN-03).
-library;
+﻿library;
 
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
-/// Notifier que gestiona la ruta de la foto seleccionada.
-///
-/// Estado: `String?`
-/// - `null` → sin imagen seleccionada
-/// - `String` → ruta absoluta local de la foto
 class ImagePickerNotifier extends Notifier<String?> {
   @override
   String? build() => null;
 
-  /// Abre la galería y actualiza el estado con la ruta seleccionada.
-  ///
-  /// Si el usuario cancela o ocurre un error, el estado queda en `null`
-  /// y la operación falla silenciosamente (RN-03: foto siempre opcional).
-  Future<void> pickImage() async {
+  Future<void> pickFromGallery() async {
     try {
       final picker = ImagePicker();
       final file = await picker.pickImage(
@@ -28,17 +16,84 @@ class ImagePickerNotifier extends Notifier<String?> {
         imageQuality: 80,
         maxWidth: 1024,
       );
-      state = file?.path; // null si el usuario canceló
+      state = file?.path;
     } catch (_) {
-      // RN-03: fallo silencioso — la prenda se guarda sin imagen
       state = null;
     }
   }
 
-  /// Descarta la imagen seleccionada.
+  Future<void> pickFromCamera() async {
+    try {
+      final picker = ImagePicker();
+      final file = await picker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 80,
+        maxWidth: 1024,
+      );
+      state = file?.path;
+    } catch (_) {
+      state = null;
+    }
+  }
+
   void clearImage() => state = null;
 }
 
-/// Provider global del notifier de imagen.
 final imagePickerProvider =
     NotifierProvider<ImagePickerNotifier, String?>(ImagePickerNotifier.new);
+
+/// Muestra un bottom sheet para elegir entre cámara y galería.
+Future<void> showImagePickerSheet(BuildContext context, WidgetRef ref) async {
+  await showModalBottomSheet(
+    context: context,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    ),
+    builder: (ctx) => SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40, height: 4,
+              margin: const EdgeInsets.only(bottom: 16),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const Text(
+              'Seleccionar foto',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            ),
+            const SizedBox(height: 16),
+            ListTile(
+              leading: const CircleAvatar(
+                child: Icon(Icons.camera_alt_outlined),
+              ),
+              title: const Text('Tomar foto'),
+              subtitle: const Text('Usar la cámara del dispositivo'),
+              onTap: () {
+                Navigator.pop(ctx);
+                ref.read(imagePickerProvider.notifier).pickFromCamera();
+              },
+            ),
+            ListTile(
+              leading: const CircleAvatar(
+                child: Icon(Icons.photo_library_outlined),
+              ),
+              title: const Text('Elegir de galería'),
+              subtitle: const Text('Seleccionar una foto existente'),
+              onTap: () {
+                Navigator.pop(ctx);
+                ref.read(imagePickerProvider.notifier).pickFromGallery();
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    ),
+  );
+}

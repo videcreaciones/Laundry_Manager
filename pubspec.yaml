@@ -1,4 +1,4 @@
-name: laundry_manager
+﻿name: laundry_manager
 description: "Gestión profesional del ciclo de vida de prendas de lavandería."
 publish_to: "none"
 version: 1.0.0+1
@@ -9,39 +9,21 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
-  # ── Estado ─────────────────────────────────────────────────────────────────
-  flutter_riverpod: ^3.3.0       # D-02: Estado reactivo (Riverpod 3.x)
-  riverpod_annotation: ^4.0.2    # D-02: Annotations para riverpod_generator
-
-  # ── Persistencia local ──────────────────────────────────────────────────────
-  hive_flutter: ^1.1.0           # D-03: Un único box 'garments'
-
-  # ── Navegación ──────────────────────────────────────────────────────────────
-  go_router: ^14.2.7             # D-05: Navegación declarativa
-
-  # ── Imagen ──────────────────────────────────────────────────────────────────
-  image_picker: ^1.1.2           # Selección de foto desde galería
-
-  # ── Utilidades de dominio ───────────────────────────────────────────────────
-  fpdart: ^1.1.0                 # D-01: Either / Unit / Option (Railway-Oriented)
-  uuid: ^4.4.0                   # Generación de IDs únicos (v4) — en use case
-  path_provider: ^2.1.3          # Directorio de la app para init de Hive
+  flutter_riverpod: ^3.3.0
+  riverpod_annotation: ^4.0.2
+  hive_flutter: ^1.1.0
+  go_router: ^14.2.7
+  image_picker: ^1.1.2
+  fpdart: ^1.1.0
+  uuid: ^4.4.0
+  path_provider: ^2.1.3
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
-  # ── Generadores de código ───────────────────────────────────────────────────
-  hive_generator: ^2.0.1         # Genera GarmentModelAdapter (garment_model.g.dart)
-  riverpod_generator: ^4.0.3     # Genera boilerplate de providers (Riverpod 3.x)
-  build_runner: ^2.4.9           # Runner para hive_generator + riverpod_generator
-
-  # ── Testing ─────────────────────────────────────────────────────────────────
-  mockito: ^5.4.4                # @GenerateMocks([IGarmentRepository])
-  riverpod_test: ^0.1.8          # testProvider / testNotifier helpers
-
-  # ── Análisis estático ───────────────────────────────────────────────────────
+  riverpod_generator: ^4.0.3
+  build_runner: ^2.4.9
+  mockito: ^5.4.4
   flutter_lints: ^4.0.0
 
 flutter:
