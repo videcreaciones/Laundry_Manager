@@ -66,4 +66,3 @@ flutter run
 - **RN-04:** Nombre y propietario son campos requeridos
 - **RN-05:** Los cambios persisten inmediatamente (sin "guardar manual")
 '@
-```
