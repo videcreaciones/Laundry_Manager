@@ -1,0 +1,31 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  errors:
+    # Tratar imports de dominio cruzados como errores en CI
+    invalid_use_of_protected_member: warning
+    must_be_immutable: error
+  exclude:
+    - "**/*.g.dart"      # Archivos generados por build_runner
+    - "**/*.freezed.dart"
+
+linter:
+  rules:
+    # ── Calidad general ─────────────────────────────────────────────────────
+    - always_use_package_imports          # Sin imports relativos entre capas
+    - prefer_const_constructors           # Inmutabilidad en entidades
+    - prefer_const_declarations
+    - prefer_final_fields
+    - prefer_final_locals
+    - avoid_dynamic_calls                 # Tipado estricto
+    - avoid_print                         # Usar logger, no print
+    - avoid_redundant_argument_values
+    - avoid_returning_null_for_void
+
+    # ── Clean Architecture ──────────────────────────────────────────────────
+    - directives_ordering                 # Orden: dart / flutter / paquetes / locales
+
+    # ── Seguridad ───────────────────────────────────────────────────────────
+    - cancel_subscriptions
+    - close_sinks
+    - unawaited_futures                   # Todo Future debe ser awaited o ignorado explícitamente
