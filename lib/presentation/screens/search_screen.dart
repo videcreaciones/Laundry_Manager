@@ -9,6 +9,9 @@ import 'package:laundry_manager/presentation/providers/garment_provider.dart';
 import 'package:laundry_manager/presentation/router/app_router.dart';
 import 'package:laundry_manager/presentation/widgets/garment_card_widget.dart';
 
+// Sentinel para filtrar prendas sin categoria
+const _kNoCategoryId = '__none__';
+
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
 
@@ -19,7 +22,7 @@ class SearchScreen extends ConsumerStatefulWidget {
 class _SearchScreenState extends ConsumerState<SearchScreen> {
   final _searchController = TextEditingController();
   String _query = '';
-  String? _selectedCategoryId;
+  String? _selectedCategoryId; // null = Todos, _kNoCategoryId = Sin categoria
 
   @override
   void dispose() {
@@ -29,11 +32,17 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   List<GarmentEntity> _filtered(List<GarmentEntity> all) {
     return all.where((g) {
+      // Filtro de texto
       final matchesQuery = _query.isEmpty ||
           g.name.toLowerCase().contains(_query.toLowerCase()) ||
           g.owner.toLowerCase().contains(_query.toLowerCase());
+
+      // Filtro de categoria
       final matchesCategory = _selectedCategoryId == null ||
-          g.categoryId == _selectedCategoryId;
+          (_selectedCategoryId == _kNoCategoryId
+              ? g.categoryId == null
+              : g.categoryId == _selectedCategoryId);
+
       return matchesQuery && matchesCategory;
     }).toList();
   }
@@ -41,19 +50,19 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   @override
   Widget build(BuildContext context) {
     final garmentsAsync = ref.watch(garmentNotifierProvider);
-    final categories = ref.watch(categoryProvider);
-    final theme = Theme.of(context);
+    final categories    = ref.watch(categoryProvider);
+    final theme         = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Buscar prendas')),
       body: Column(
         children: [
-          // ── Barra de búsqueda ───────────────────────────────────────
+          // ── Barra de búsqueda ──────────────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
             child: TextField(
               controller: _searchController,
-              autofocus: true,
+              autofocus: false,
               decoration: InputDecoration(
                 hintText: 'Buscar por nombre o propietario...',
                 prefixIcon: const Icon(Icons.search),
@@ -67,47 +76,56 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       )
                     : null,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                    borderRadius: BorderRadius.circular(12)),
                 filled: true,
               ),
               onChanged: (v) => setState(() => _query = v),
             ),
           ),
 
-          // ── Filtro por categoría ────────────────────────────────────
-          if (categories.isNotEmpty)
-            SizedBox(
-              height: 48,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                children: [
-                  _CategoryChip(
-                    label: 'Todas',
-                    selected: _selectedCategoryId == null,
-                    onTap: () => setState(() => _selectedCategoryId = null),
-                  ),
-                  ...categories.map((cat) => _CategoryChip(
-                    label: cat.name,
-                    selected: _selectedCategoryId == cat.id,
-                    onTap: () => setState(() =>
-                      _selectedCategoryId = _selectedCategoryId == cat.id
-                          ? null : cat.id),
-                  )),
-                ],
-              ),
+          // ── Chips de categoría ─────────────────────────────────────
+          SizedBox(
+            height: 48,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              children: [
+                // Todos
+                _CategoryChip(
+                  label: 'Todos',
+                  selected: _selectedCategoryId == null,
+                  onTap: () => setState(() => _selectedCategoryId = null),
+                ),
+                // Sin categoría
+                _CategoryChip(
+                  label: 'Sin categoría',
+                  selected: _selectedCategoryId == _kNoCategoryId,
+                  onTap: () => setState(() =>
+                    _selectedCategoryId = _selectedCategoryId == _kNoCategoryId
+                        ? null : _kNoCategoryId),
+                ),
+                // Categorías del usuario
+                ...categories.map((cat) => _CategoryChip(
+                  label: cat.name,
+                  selected: _selectedCategoryId == cat.id,
+                  onTap: () => setState(() =>
+                    _selectedCategoryId = _selectedCategoryId == cat.id
+                        ? null : cat.id),
+                )),
+              ],
             ),
+          ),
 
           const Divider(height: 1),
 
-          // ── Resultados ──────────────────────────────────────────────
+          // ── Resultados ─────────────────────────────────────────────
           Expanded(
             child: garmentsAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(child: Text('Error: $e')),
               data: (garments) {
                 final filtered = _filtered(garments);
+
                 if (_query.isEmpty && _selectedCategoryId == null) {
                   return Center(
                     child: Column(
@@ -116,13 +134,14 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         Icon(Icons.search, size: 64,
                             color: theme.colorScheme.outlineVariant),
                         const SizedBox(height: 12),
-                        Text('Escribe para buscar prendas',
+                        Text('Escribe o selecciona una categoría',
                             style: theme.textTheme.bodyMedium?.copyWith(
                                 color: theme.colorScheme.onSurfaceVariant)),
                       ],
                     ),
                   );
                 }
+
                 if (filtered.isEmpty) {
                   return Center(
                     child: Column(
@@ -138,6 +157,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     ),
                   );
                 }
+
                 return ListView.builder(
                   padding: const EdgeInsets.only(top: 8, bottom: 80),
                   itemCount: filtered.length,
@@ -184,8 +204,7 @@ class _CategoryChip extends StatelessWidget {
               : theme.colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(20),
         ),
-        child: Text(
-          label,
+        child: Text(label,
           style: TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w500,

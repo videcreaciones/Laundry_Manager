@@ -185,7 +185,7 @@ class _AppDrawer extends StatelessWidget {
                 showAboutDialog(
                   context: context,
                   applicationName: 'Laundry Manager',
-                  applicationVersion: '1.2.0',
+                  applicationVersion: '1.2.1',
                   applicationLegalese: 'Gestión de prendas de lavandería',
                 );
               },
@@ -318,3 +318,4 @@ class _ErrorView extends StatelessWidget {
     );
   }
 }
+

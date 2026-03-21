@@ -19,29 +19,26 @@ final class UpdateGarmentUseCase {
   }) async {
     if (name.trim().isEmpty) {
       return Left(const GarmentFailureValidationError(
-        field: 'name', message: 'El nombre es requerido.',
-      ));
+        field: 'name', message: 'El nombre es requerido.'));
     }
     if (owner.trim().isEmpty) {
       return Left(const GarmentFailureValidationError(
-        field: 'owner', message: 'El propietario es requerido.',
-      ));
+        field: 'owner', message: 'El propietario es requerido.'));
     }
 
     final updated = GarmentEntity.fromPersistence(
-      id: original.id,
-      name: name.trim(),
-      owner: owner.trim(),
-      status: original.status,
-      imagePath: imagePath,
-      notes: notes?.trim().isEmpty == true ? null : notes?.trim(),
-      createdAt: original.createdAt,
-      updatedAt: DateTime.now(),
+      id:         original.id,
+      name:       name.trim(),
+      owner:      owner.trim(),
+      status:     original.status,
+      imagePath:  imagePath,
+      notes:      notes?.trim().isEmpty == true ? null : notes?.trim(),
+      categoryId: categoryId,   // ← persiste el nuevo valor (puede ser null)
+      createdAt:  original.createdAt,
+      updatedAt:  DateTime.now(),
     );
 
     final result = await _repository.update(updated);
     return result.fold(Left.new, (_) => Right(updated));
   }
 }
-
-
