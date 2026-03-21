@@ -1,5 +1,4 @@
-/// Pantalla principal: lista todas las prendas agrupadas por estado.
-library;
+﻿library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,38 +9,102 @@ import 'package:laundry_manager/presentation/providers/garment_provider.dart';
 import 'package:laundry_manager/presentation/router/app_router.dart';
 import 'package:laundry_manager/presentation/widgets/garment_card_widget.dart';
 
-class GarmentListScreen extends ConsumerWidget {
+class GarmentListScreen extends ConsumerStatefulWidget {
   const GarmentListScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<GarmentListScreen> createState() => _GarmentListScreenState();
+}
+
+class _GarmentListScreenState extends ConsumerState<GarmentListScreen> {
+  final _searchController = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  List<GarmentEntity> _filtered(List<GarmentEntity> all) {
+    if (_query.isEmpty) return all;
+    return all.where((g) =>
+      g.name.toLowerCase().contains(_query.toLowerCase()) ||
+      g.owner.toLowerCase().contains(_query.toLowerCase())
+    ).toList();
+  }
+
+  @override
+  Widget build(BuildContext context, ) {
     final garmentsAsync = ref.watch(garmentNotifierProvider);
+    final theme = Theme.of(context);
 
     return Scaffold(
+      drawer: _AppDrawer(),
       appBar: AppBar(
-        title: const Text(
-          'Laundry Manager',
-          style: TextStyle(fontWeight: FontWeight.w700),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.info_outline),
-            tooltip: 'Acerca de',
-            onPressed: () => _showAboutDialog(context),
+        title: const Text('Laundry Manager',
+            style: TextStyle(fontWeight: FontWeight.w700)),
+      ),
+      body: Column(
+        children: [
+          // ── Barra de búsqueda ─────────────────────────────────────
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Buscar prendas...',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: _query.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          setState(() => _query = '');
+                        },
+                      )
+                    : null,
+                border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12)),
+                filled: true,
+                contentPadding: const EdgeInsets.symmetric(vertical: 0),
+              ),
+              onChanged: (v) => setState(() => _query = v),
+            ),
+          ),
+
+          // ── Lista ─────────────────────────────────────────────────
+          Expanded(
+            child: garmentsAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (error, _) => _ErrorView(
+                message: error is GarmentException
+                    ? error.userMessage : 'Error inesperado: $error',
+                onRetry: () => ref.invalidate(garmentNotifierProvider),
+              ),
+              data: (garments) {
+                final filtered = _filtered(garments);
+                if (garments.isEmpty) return const _EmptyView();
+                if (filtered.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.search_off, size: 64,
+                            color: theme.colorScheme.outlineVariant),
+                        const SizedBox(height: 12),
+                        Text('No se encontraron prendas',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant)),
+                      ],
+                    ),
+                  );
+                }
+                return _GarmentList(garments: filtered);
+              },
+            ),
           ),
         ],
-      ),
-      body: garmentsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => _ErrorView(
-          message: error is GarmentException
-              ? error.userMessage
-              : 'Error inesperado: $error',
-          onRetry: () => ref.invalidate(garmentNotifierProvider),
-        ),
-        data: (garments) => garments.isEmpty
-            ? const _EmptyView()
-            : _GarmentList(garments: garments),
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push(AppRoutes.add),
@@ -50,18 +113,91 @@ class GarmentListScreen extends ConsumerWidget {
       ),
     );
   }
+}
 
-  void _showAboutDialog(BuildContext context) {
-    showAboutDialog(
-      context: context,
-      applicationName: 'Laundry Manager',
-      applicationVersion: '1.0.0',
-      applicationLegalese: 'Gestión de prendas de lavandería',
+// ── Drawer lateral ────────────────────────────────────────────────────────────
+class _AppDrawer extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Drawer(
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              color: theme.colorScheme.primaryContainer,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.local_laundry_service,
+                      size: 40, color: theme.colorScheme.onPrimaryContainer),
+                  const SizedBox(height: 8),
+                  Text('Laundry Manager',
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: theme.colorScheme.onPrimaryContainer,
+                        fontWeight: FontWeight.bold,
+                      )),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+
+            // Inicio
+            ListTile(
+              leading: const Icon(Icons.home_outlined),
+              title: const Text('Inicio'),
+              selected: true,
+              onTap: () => Navigator.pop(context),
+            ),
+
+            // Buscar
+            ListTile(
+              leading: const Icon(Icons.search),
+              title: const Text('Buscar'),
+              onTap: () {
+                Navigator.pop(context);
+                context.push(AppRoutes.search);
+              },
+            ),
+
+            // Categorías
+            ListTile(
+              leading: const Icon(Icons.label_outline),
+              title: const Text('Categorías'),
+              onTap: () {
+                Navigator.pop(context);
+                context.push(AppRoutes.categories);
+              },
+            ),
+
+            const Divider(),
+
+            // Acerca de
+            ListTile(
+              leading: const Icon(Icons.info_outline),
+              title: const Text('Acerca de'),
+              onTap: () {
+                Navigator.pop(context);
+                showAboutDialog(
+                  context: context,
+                  applicationName: 'Laundry Manager',
+                  applicationVersion: '1.2.0',
+                  applicationLegalese: 'Gestión de prendas de lavandería',
+                );
+              },
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
 
-/// Lista de prendas con separadores por estado.
+// ── Lista agrupada ────────────────────────────────────────────────────────────
 class _GarmentList extends ConsumerWidget {
   final List<GarmentEntity> garments;
   const _GarmentList({required this.garments});
@@ -69,23 +205,19 @@ class _GarmentList extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return ListView.builder(
-      padding: const EdgeInsets.only(top: 8, bottom: 80),
+      padding: const EdgeInsets.only(top: 4, bottom: 80),
       itemCount: garments.length,
       itemBuilder: (context, index) {
         final garment = garments[index];
         final prevGarment = index > 0 ? garments[index - 1] : null;
         final showHeader = prevGarment?.status != garment.status;
-
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (showHeader) _StatusHeader(status: garment.status),
             GarmentCard(
               garment: garment,
-              onTap: () => context.push(
-                AppRoutes.detailPath(garment.id),
-                extra: garment,
-              ),
+              onTap: () => context.push(AppRoutes.detailPath(garment.id), extra: garment),
               onStatusChange: garment.status.nextStatus != null
                   ? () => _handleStatusChange(context, ref, garment)
                   : null,
@@ -97,33 +229,24 @@ class _GarmentList extends ConsumerWidget {
   }
 
   Future<void> _handleStatusChange(
-    BuildContext context,
-    WidgetRef ref,
-    GarmentEntity garment,
-  ) async {
+      BuildContext context, WidgetRef ref, GarmentEntity garment) async {
     final nextStatus = garment.status.nextStatus;
     if (nextStatus == null) return;
-
     try {
       await ref.read(garmentNotifierProvider.notifier).updateStatus(
-        id: garment.id,
-        from: garment.status,
-        to: nextStatus,
+        id: garment.id, from: garment.status, to: nextStatus,
       );
     } on GarmentException catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.userMessage),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
+          SnackBar(content: Text(e.userMessage),
+              backgroundColor: Theme.of(context).colorScheme.error),
         );
       }
     }
   }
 }
 
-/// Header de sección por estado.
 class _StatusHeader extends StatelessWidget {
   final GarmentStatus status;
   const _StatusHeader({required this.status});
@@ -144,7 +267,6 @@ class _StatusHeader extends StatelessWidget {
   }
 }
 
-/// Vista de lista vacía con call-to-action.
 class _EmptyView extends StatelessWidget {
   const _EmptyView();
 
@@ -154,36 +276,25 @@ class _EmptyView extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.local_laundry_service_outlined,
-            size: 72,
-            color: Theme.of(context).colorScheme.outlineVariant,
-          ),
+          Icon(Icons.local_laundry_service_outlined, size: 72,
+              color: Theme.of(context).colorScheme.outlineVariant),
           const SizedBox(height: 16),
-          Text(
-            'No hay prendas registradas',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ),
+          Text('No hay prendas registradas',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant)),
           const SizedBox(height: 8),
-          Text(
-            'Toca el botón + para agregar una prenda',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).colorScheme.outlineVariant,
-            ),
-          ),
+          Text('Toca el botón + para agregar una prenda',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.outlineVariant)),
         ],
       ),
     );
   }
 }
 
-/// Vista de error con botón de reintento.
 class _ErrorView extends StatelessWidget {
   final String message;
   final VoidCallback onRetry;
-
   const _ErrorView({required this.message, required this.onRetry});
 
   @override
@@ -194,22 +305,13 @@ class _ErrorView extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.error_outline,
-              size: 48,
-              color: Theme.of(context).colorScheme.error,
-            ),
+            Icon(Icons.error_outline, size: 48,
+                color: Theme.of(context).colorScheme.error),
             const SizedBox(height: 12),
-            Text(
-              message,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
+            Text(message, textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium),
             const SizedBox(height: 16),
-            FilledButton.tonal(
-              onPressed: onRetry,
-              child: const Text('Reintentar'),
-            ),
+            FilledButton.tonal(onPressed: onRetry, child: const Text('Reintentar')),
           ],
         ),
       ),

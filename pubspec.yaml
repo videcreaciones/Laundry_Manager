@@ -1,7 +1,7 @@
 ﻿name: laundry_manager
 description: "Gestión profesional del ciclo de vida de prendas de lavandería."
 publish_to: "none"
-version: 1.0.0+1
+version: 1.2.0+3
 
 environment:
   sdk: ">=3.3.0 <4.0.0"
@@ -28,3 +28,4 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+

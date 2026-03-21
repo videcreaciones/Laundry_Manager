@@ -1,5 +1,4 @@
-﻿// GENERATED CODE - DO NOT MODIFY BY HAND
-part of 'garment_model.dart';
+﻿part of 'garment_model.dart';
 
 class GarmentModelAdapter extends TypeAdapter<GarmentModel> {
   @override
@@ -20,29 +19,23 @@ class GarmentModelAdapter extends TypeAdapter<GarmentModel> {
       createdAt:   fields[5] as DateTime,
       updatedAt:   fields[6] as DateTime,
       notes:       fields[7] as String?,
+      categoryId:  fields[8] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, GarmentModel obj) {
     writer
-      ..writeByte(8)
-      ..writeByte(0)
-      ..write(obj.id)
-      ..writeByte(1)
-      ..write(obj.name)
-      ..writeByte(2)
-      ..write(obj.owner)
-      ..writeByte(3)
-      ..write(obj.statusIndex)
-      ..writeByte(4)
-      ..write(obj.imagePath)
-      ..writeByte(5)
-      ..write(obj.createdAt)
-      ..writeByte(6)
-      ..write(obj.updatedAt)
-      ..writeByte(7)
-      ..write(obj.notes);
+      ..writeByte(9)
+      ..writeByte(0)..write(obj.id)
+      ..writeByte(1)..write(obj.name)
+      ..writeByte(2)..write(obj.owner)
+      ..writeByte(3)..write(obj.statusIndex)
+      ..writeByte(4)..write(obj.imagePath)
+      ..writeByte(5)..write(obj.createdAt)
+      ..writeByte(6)..write(obj.updatedAt)
+      ..writeByte(7)..write(obj.notes)
+      ..writeByte(8)..write(obj.categoryId);
   }
 
   @override

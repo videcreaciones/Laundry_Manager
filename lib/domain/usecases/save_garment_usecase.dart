@@ -20,10 +20,12 @@ final class SaveGarmentUseCase {
     required String owner,
     String? imagePath,
     String? notes,
+    String? categoryId,
   }) async {
     final id = _fixedIdForTesting ?? const Uuid().v4();
     final entityResult = GarmentEntity.create(
-      id: id, name: name, owner: owner, imagePath: imagePath, notes: notes,
+      id: id, name: name, owner: owner,
+      imagePath: imagePath, notes: notes, categoryId: categoryId,
     );
     if (entityResult.isLeft()) return entityResult;
     final entity = entityResult.getOrElse((_) => throw StateError('unreachable'));
@@ -31,3 +33,5 @@ final class SaveGarmentUseCase {
     return saveResult.fold(Left.new, (_) => Right(entity));
   }
 }
+
+

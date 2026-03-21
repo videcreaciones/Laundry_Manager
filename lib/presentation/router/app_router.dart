@@ -1,51 +1,46 @@
-﻿/// ConfiguraciÃ³n de rutas de la aplicaciÃ³n con go_router.
-///
-/// Rutas definidas:
-///   /           â†’ GarmentListScreen (pantalla principal)
-///   /add        â†’ AddGarmentScreen
-///   /detail/:id â†’ GarmentDetailScreen
-library;
+﻿library;
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:laundry_manager/domain/entities/garment_entity.dart';
 import 'package:laundry_manager/presentation/screens/add_garment_screen.dart';
+import 'package:laundry_manager/presentation/screens/categories_screen.dart';
+import 'package:laundry_manager/presentation/screens/edit_garment_screen.dart';
 import 'package:laundry_manager/presentation/screens/garment_detail_screen.dart';
 import 'package:laundry_manager/presentation/screens/garment_list_screen.dart';
+import 'package:laundry_manager/presentation/screens/search_screen.dart';
 
-/// Rutas nombradas para evitar strings mÃ¡gicos en el cÃ³digo.
 abstract final class AppRoutes {
-  static const list   = '/';
-  static const add    = '/add';
-  static const detail = '/detail/:id';
+  static const list       = '/';
+  static const add        = '/add';
+  static const detail     = '/detail/:id';
+  static const edit       = '/edit/:id';
+  static const search     = '/search';
+  static const categories = '/categories';
 
   static String detailPath(String id) => '/detail/$id';
+  static String editPath(String id)   => '/edit/$id';
 }
 
-/// Router principal de la aplicaciÃ³n.
 final appRouter = GoRouter(
   initialLocation: AppRoutes.list,
-  debugLogDiagnostics: false,
   routes: [
-    GoRoute(
-      path: AppRoutes.list,
-      builder: (_, __) => const GarmentListScreen(),
-    ),
-    GoRoute(
-      path: AppRoutes.add,
-      builder: (_, __) => const AddGarmentScreen(),
-    ),
+    GoRoute(path: AppRoutes.list,       builder: (_, __) => const GarmentListScreen()),
+    GoRoute(path: AppRoutes.add,        builder: (_, __) => const AddGarmentScreen()),
+    GoRoute(path: AppRoutes.search,     builder: (_, __) => const SearchScreen()),
+    GoRoute(path: AppRoutes.categories, builder: (_, __) => const CategoriesScreen()),
     GoRoute(
       path: AppRoutes.detail,
-      builder: (context, state) {
-        final garment = state.extra as GarmentEntity;
-        return GarmentDetailScreen(garment: garment);
-      },
+      builder: (context, state) =>
+          GarmentDetailScreen(garment: state.extra as GarmentEntity),
+    ),
+    GoRoute(
+      path: AppRoutes.edit,
+      builder: (context, state) =>
+          EditGarmentScreen(garment: state.extra as GarmentEntity),
     ),
   ],
   errorBuilder: (context, state) => Scaffold(
-    body: Center(
-      child: Text('Ruta no encontrada: ${state.uri}'),
-    ),
+    body: Center(child: Text('Ruta no encontrada: ${state.uri}')),
   ),
 );

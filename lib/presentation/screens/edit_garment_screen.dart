@@ -3,25 +3,39 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:laundry_manager/domain/entities/garment_entity.dart';
 import 'package:laundry_manager/presentation/providers/category_provider.dart';
 import 'package:laundry_manager/presentation/providers/garment_provider.dart';
 import 'package:laundry_manager/presentation/providers/image_picker_provider.dart';
 import 'package:laundry_manager/presentation/widgets/image_preview_widget.dart';
 
-class AddGarmentScreen extends ConsumerStatefulWidget {
-  const AddGarmentScreen({super.key});
+class EditGarmentScreen extends ConsumerStatefulWidget {
+  final GarmentEntity garment;
+  const EditGarmentScreen({super.key, required this.garment});
 
   @override
-  ConsumerState<AddGarmentScreen> createState() => _AddGarmentScreenState();
+  ConsumerState<EditGarmentScreen> createState() => _EditGarmentScreenState();
 }
 
-class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
-  final _formKey       = GlobalKey<FormState>();
-  final _nameController  = TextEditingController();
-  final _ownerController = TextEditingController();
-  final _notesController = TextEditingController();
+class _EditGarmentScreenState extends ConsumerState<EditGarmentScreen> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _nameController;
+  late final TextEditingController _ownerController;
+  late final TextEditingController _notesController;
   String? _selectedCategoryId;
   bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController  = TextEditingController(text: widget.garment.name);
+    _ownerController = TextEditingController(text: widget.garment.owner);
+    _notesController = TextEditingController(text: widget.garment.notes ?? '');
+    _selectedCategoryId = widget.garment.categoryId;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(imagePickerProvider.notifier).setImage(widget.garment.imagePath);
+    });
+  }
 
   @override
   void dispose() {
@@ -37,17 +51,18 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
     setState(() => _isSaving = true);
     final imagePath = ref.read(imagePickerProvider);
     try {
-      await ref.read(garmentNotifierProvider.notifier).addGarment(
-        name: _nameController.text.trim(),
-        owner: _ownerController.text.trim(),
-        imagePath: imagePath,
-        notes: _notesController.text.trim().isEmpty
-            ? null : _notesController.text.trim(),
+      await ref.read(garmentNotifierProvider.notifier).editGarment(
+        original:   widget.garment,
+        name:       _nameController.text.trim(),
+        owner:      _ownerController.text.trim(),
+        imagePath:  imagePath,
+        notes:      _notesController.text.trim().isEmpty
+                        ? null : _notesController.text.trim(),
         categoryId: _selectedCategoryId,
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Prenda registrada correctamente')));
+          const SnackBar(content: Text('Prenda actualizada correctamente')));
         context.pop();
       }
     } on GarmentException catch (e) {
@@ -67,7 +82,7 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Nueva prenda'),
+        title: const Text('Editar prenda'),
         leading: IconButton(icon: const Icon(Icons.close), onPressed: () => context.pop()),
         actions: [
           TextButton(
@@ -91,7 +106,6 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
               controller: _nameController,
               decoration: const InputDecoration(
                 labelText: 'Nombre de la prenda *',
-                hintText: 'Ej: Camisa azul manga larga',
                 prefixIcon: Icon(Icons.checkroom_outlined),
                 border: OutlineInputBorder(),
               ),
@@ -105,7 +119,6 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
               controller: _ownerController,
               decoration: const InputDecoration(
                 labelText: 'Propietario *',
-                hintText: 'Ej: Juan Pérez',
                 prefixIcon: Icon(Icons.person_outline),
                 border: OutlineInputBorder(),
               ),
@@ -115,9 +128,9 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
             ),
             const SizedBox(height: 16),
 
-            // ── Categoría (opcional) ─────────────────────────────────
+            // ── Categoría (opcional) ──────────────────────────────────
             DropdownButtonFormField<String>(
-              initialValue: _selectedCategoryId,
+              value: _selectedCategoryId,
               decoration: const InputDecoration(
                 labelText: 'Categoría (opcional)',
                 prefixIcon: Icon(Icons.label_outline),
@@ -139,7 +152,6 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
               controller: _notesController,
               decoration: const InputDecoration(
                 labelText: 'Notas (opcional)',
-                hintText: 'Ej: Lavar en frío, no centrifugar',
                 prefixIcon: Icon(Icons.notes_outlined),
                 border: OutlineInputBorder(),
               ),
@@ -156,4 +168,3 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
     );
   }
 }
-

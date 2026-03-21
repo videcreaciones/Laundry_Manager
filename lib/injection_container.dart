@@ -1,13 +1,13 @@
-/// Contenedor de inyección de dependencias.
+﻿/// Contenedor de inyecciÃ³n de dependencias.
 ///
-/// Define el árbol completo de providers de Riverpod, respetando
+/// Define el Ã¡rbol completo de providers de Riverpod, respetando
 /// el orden de dependencias entre capas:
 ///
-///   Hive Box → DataSource → Repository → UseCases → Notifier
+///   Hive Box â†’ DataSource â†’ Repository â†’ UseCases â†’ Notifier
 ///
-/// Restricciones de diseño:
+/// Restricciones de diseÃ±o:
 /// - Los providers de dominio NO importan hive/ directamente.
-/// - El [hiveBoxProvider] es el único punto de entrada de Hive al grafo.
+/// - El [hiveBoxProvider] es el Ãºnico punto de entrada de Hive al grafo.
 /// - Se sobreescribe en tests con [ProviderScope(overrides: [...])].
 library;
 
@@ -22,11 +22,12 @@ import 'package:laundry_manager/domain/usecases/delete_garment_usecase.dart';
 import 'package:laundry_manager/domain/usecases/get_all_garments_usecase.dart';
 import 'package:laundry_manager/domain/usecases/save_garment_usecase.dart';
 import 'package:laundry_manager/domain/usecases/update_garment_status_usecase.dart';
+import 'package:laundry_manager/domain/usecases/update_garment_usecase.dart';
 
-// ── Capa de Datos ─────────────────────────────────────────────────────────────
+// â”€â”€ Capa de Datos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 /// Box de Hive. Se sobreescribe en [main.dart] con el box ya abierto.
-/// Lanza [UnimplementedError] si se usa sin override (protección en tests).
+/// Lanza [UnimplementedError] si se usa sin override (protecciÃ³n en tests).
 final hiveBoxProvider = Provider<Box<GarmentModel>>(
   (ref) => throw UnimplementedError(
     'hiveBoxProvider debe ser sobreescrito en ProviderScope con el box abierto.',
@@ -34,7 +35,7 @@ final hiveBoxProvider = Provider<Box<GarmentModel>>(
   name: 'hiveBoxProvider',
 );
 
-/// Mapper bidireccional — sin estado, singleton.
+/// Mapper bidireccional â€” sin estado, singleton.
 final garmentMapperProvider = Provider<GarmentMapper>(
   (_) => const GarmentMapper(),
   name: 'garmentMapperProvider',
@@ -46,7 +47,7 @@ final garmentDataSourceProvider = Provider<HiveGarmentDataSource>(
   name: 'garmentDataSourceProvider',
 );
 
-/// Implementación concreta del repositorio.
+/// ImplementaciÃ³n concreta del repositorio.
 final garmentRepositoryProvider = Provider<IGarmentRepository>(
   (ref) => GarmentRepositoryImpl(
     dataSource: ref.read(garmentDataSourceProvider),
@@ -55,7 +56,7 @@ final garmentRepositoryProvider = Provider<IGarmentRepository>(
   name: 'garmentRepositoryProvider',
 );
 
-// ── Capa de Dominio — Use Cases ───────────────────────────────────────────────
+// â”€â”€ Capa de Dominio â€” Use Cases â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 final getAllGarmentsUseCaseProvider = Provider<GetAllGarmentsUseCase>(
   (ref) => GetAllGarmentsUseCase(ref.read(garmentRepositoryProvider)),
@@ -75,4 +76,10 @@ final updateGarmentStatusUseCaseProvider = Provider<UpdateGarmentStatusUseCase>(
 final deleteGarmentUseCaseProvider = Provider<DeleteGarmentUseCase>(
   (ref) => DeleteGarmentUseCase(ref.read(garmentRepositoryProvider)),
   name: 'deleteGarmentUseCaseProvider',
+);
+
+
+final updateGarmentUseCaseProvider = Provider<UpdateGarmentUseCase>(
+  (ref) => UpdateGarmentUseCase(ref.read(garmentRepositoryProvider)),
+  name: 'updateGarmentUseCaseProvider',
 );

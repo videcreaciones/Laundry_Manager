@@ -37,6 +37,7 @@ class ImagePickerNotifier extends Notifier<String?> {
   }
 
   void clearImage() => state = null;
+  void setImage(String? path) => state = path;
 }
 
 final imagePickerProvider =
@@ -97,3 +98,4 @@ Future<void> showImagePickerSheet(BuildContext context, WidgetRef ref) async {
     ),
   );
 }
+
