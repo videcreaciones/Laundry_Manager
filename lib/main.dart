@@ -6,6 +6,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:laundry_manager/data/models/garment_model.dart';
 import 'package:laundry_manager/injection_container.dart';
 import 'package:laundry_manager/presentation/providers/category_provider.dart';
+import 'package:laundry_manager/presentation/providers/settings_provider.dart';
 import 'package:laundry_manager/presentation/router/app_router.dart';
 import 'package:path_provider/path_provider.dart';
 
@@ -27,6 +28,7 @@ void main() async {
   }
 
   await Hive.openBox(kCategoryBoxName);
+  await Hive.openBox(kSettingsBoxName);
 
   runApp(
     ProviderScope(
@@ -36,15 +38,36 @@ void main() async {
   );
 }
 
-class LaundryManagerApp extends StatelessWidget {
+class LaundryManagerApp extends ConsumerWidget {
   const LaundryManagerApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final settings = ref.watch(settingsProvider);
     return MaterialApp.router(
       title: 'Laundry Manager',
+      themeMode: settings.darkMode ? ThemeMode.dark : ThemeMode.light,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1565C0)),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF1565C0),
+          brightness: Brightness.light,
+        ),
+        useMaterial3: true,
+        appBarTheme: const AppBarTheme(centerTitle: true, elevation: 0),
+        cardTheme: const CardThemeData(
+          elevation: 2,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(Radius.circular(12)),
+          ),
+        ),
+        floatingActionButtonTheme:
+            const FloatingActionButtonThemeData(elevation: 4),
+      ),
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF1565C0),
+          brightness: Brightness.dark,
+        ),
         useMaterial3: true,
         appBarTheme: const AppBarTheme(centerTitle: true, elevation: 0),
         cardTheme: const CardThemeData(

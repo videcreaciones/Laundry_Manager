@@ -130,7 +130,7 @@ class _EditGarmentScreenState extends ConsumerState<EditGarmentScreen> {
 
             // ── Categoría (opcional) ──────────────────────────────────
             DropdownButtonFormField<String>(
-              value: _selectedCategoryId,
+              initialValue: _selectedCategoryId,
               decoration: const InputDecoration(
                 labelText: 'Categoría (opcional)',
                 prefixIcon: Icon(Icons.label_outline),
@@ -168,3 +168,4 @@ class _EditGarmentScreenState extends ConsumerState<EditGarmentScreen> {
     );
   }
 }
+

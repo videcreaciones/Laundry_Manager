@@ -8,6 +8,7 @@ import 'package:laundry_manager/domain/value_objects/garment_status.dart';
 import 'package:laundry_manager/presentation/providers/garment_provider.dart';
 import 'package:laundry_manager/presentation/router/app_router.dart';
 import 'package:laundry_manager/presentation/widgets/garment_card_widget.dart';
+import 'package:laundry_manager/presentation/widgets/update_banner_widget.dart';
 
 class GarmentListScreen extends ConsumerStatefulWidget {
   const GarmentListScreen({super.key});
@@ -35,19 +36,19 @@ class _GarmentListScreenState extends ConsumerState<GarmentListScreen> {
   }
 
   @override
-  Widget build(BuildContext context, ) {
+  Widget build(BuildContext context) {
     final garmentsAsync = ref.watch(garmentNotifierProvider);
     final theme = Theme.of(context);
 
     return Scaffold(
-      drawer: _AppDrawer(),
+      drawer: const _AppDrawer(),
       appBar: AppBar(
         title: const Text('Laundry Manager',
             style: TextStyle(fontWeight: FontWeight.w700)),
       ),
       body: Column(
         children: [
-          // ── Barra de búsqueda ─────────────────────────────────────
+          const UpdateBannerWidget(),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             child: TextField(
@@ -72,8 +73,6 @@ class _GarmentListScreenState extends ConsumerState<GarmentListScreen> {
               onChanged: (v) => setState(() => _query = v),
             ),
           ),
-
-          // ── Lista ─────────────────────────────────────────────────
           Expanded(
             child: garmentsAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -115,8 +114,9 @@ class _GarmentListScreenState extends ConsumerState<GarmentListScreen> {
   }
 }
 
-// ── Drawer lateral ────────────────────────────────────────────────────────────
 class _AppDrawer extends StatelessWidget {
+  const _AppDrawer();
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -125,7 +125,6 @@ class _AppDrawer extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
@@ -141,20 +140,20 @@ class _AppDrawer extends StatelessWidget {
                         color: theme.colorScheme.onPrimaryContainer,
                         fontWeight: FontWeight.bold,
                       )),
+                  Text('v1.3.0',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onPrimaryContainer
+                              .withValues(alpha: 0.7))),
                 ],
               ),
             ),
             const SizedBox(height: 8),
-
-            // Inicio
             ListTile(
               leading: const Icon(Icons.home_outlined),
               title: const Text('Inicio'),
               selected: true,
               onTap: () => Navigator.pop(context),
             ),
-
-            // Buscar
             ListTile(
               leading: const Icon(Icons.search),
               title: const Text('Buscar'),
@@ -163,8 +162,6 @@ class _AppDrawer extends StatelessWidget {
                 context.push(AppRoutes.search);
               },
             ),
-
-            // Categorías
             ListTile(
               leading: const Icon(Icons.label_outline),
               title: const Text('Categorías'),
@@ -173,21 +170,13 @@ class _AppDrawer extends StatelessWidget {
                 context.push(AppRoutes.categories);
               },
             ),
-
             const Divider(),
-
-            // Acerca de
             ListTile(
-              leading: const Icon(Icons.info_outline),
-              title: const Text('Acerca de'),
+              leading: const Icon(Icons.settings_outlined),
+              title: const Text('Configuración'),
               onTap: () {
                 Navigator.pop(context);
-                showAboutDialog(
-                  context: context,
-                  applicationName: 'Laundry Manager',
-                  applicationVersion: '1.2.1',
-                  applicationLegalese: 'Gestión de prendas de lavandería',
-                );
+                context.push(AppRoutes.settings);
               },
             ),
           ],
@@ -197,7 +186,6 @@ class _AppDrawer extends StatelessWidget {
   }
 }
 
-// ── Lista agrupada ────────────────────────────────────────────────────────────
 class _GarmentList extends ConsumerWidget {
   final List<GarmentEntity> garments;
   const _GarmentList({required this.garments});
@@ -217,7 +205,8 @@ class _GarmentList extends ConsumerWidget {
             if (showHeader) _StatusHeader(status: garment.status),
             GarmentCard(
               garment: garment,
-              onTap: () => context.push(AppRoutes.detailPath(garment.id), extra: garment),
+              onTap: () => context.push(
+                  AppRoutes.detailPath(garment.id), extra: garment),
               onStatusChange: garment.status.nextStatus != null
                   ? () => _handleStatusChange(context, ref, garment)
                   : null,
@@ -311,11 +300,15 @@ class _ErrorView extends StatelessWidget {
             Text(message, textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyMedium),
             const SizedBox(height: 16),
-            FilledButton.tonal(onPressed: onRetry, child: const Text('Reintentar')),
+            FilledButton.tonal(
+                onPressed: onRetry, child: const Text('Reintentar')),
           ],
         ),
       ),
     );
   }
 }
+
+
+
 

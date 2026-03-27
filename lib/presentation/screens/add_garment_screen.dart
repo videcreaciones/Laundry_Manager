@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import 'package:laundry_manager/presentation/providers/category_provider.dart';
 import 'package:laundry_manager/presentation/providers/garment_provider.dart';
 import 'package:laundry_manager/presentation/providers/image_picker_provider.dart';
+import 'package:laundry_manager/domain/services/auto_description_service.dart';
+import 'package:laundry_manager/presentation/providers/settings_provider.dart';
 import 'package:laundry_manager/presentation/widgets/image_preview_widget.dart';
 
 class AddGarmentScreen extends ConsumerStatefulWidget {
@@ -16,7 +18,7 @@ class AddGarmentScreen extends ConsumerStatefulWidget {
 }
 
 class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
-  final _formKey       = GlobalKey<FormState>();
+  final _formKey        = GlobalKey<FormState>();
   final _nameController  = TextEditingController();
   final _ownerController = TextEditingController();
   final _notesController = TextEditingController();
@@ -24,25 +26,51 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
   bool _isSaving = false;
 
   @override
+  void initState() {
+    super.initState();
+    // Limpiar imagen al entrar — siempre empieza sin foto
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(imagePickerProvider.notifier).clearImage();
+    });
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
     _ownerController.dispose();
     _notesController.dispose();
-    ref.read(imagePickerProvider.notifier).clearImage();
     super.dispose();
+  }
+
+  String _generateDescription(String name, String? categoryId) {
+    final categories   = ref.read(categoryProvider);
+    final categoryName = categoryId != null
+        ? categories.where((c) => c.id == categoryId).firstOrNull?.name
+        : null;
+    return const AutoDescriptionService().generate(
+      name:         name,
+      owner:        _ownerController.text.trim(),
+      categoryName: categoryName,
+    );
   }
 
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isSaving = true);
-    final imagePath = ref.read(imagePickerProvider);
+
+    final imagePath  = ref.read(imagePickerProvider);
+    final autoFill   = ref.read(settingsProvider).autoFill;
+    final name       = _nameController.text.trim();
+    final notes      = _notesController.text.trim().isEmpty
+        ? (autoFill ? _generateDescription(name, _selectedCategoryId) : null)
+        : _notesController.text.trim();
+
     try {
       await ref.read(garmentNotifierProvider.notifier).addGarment(
-        name: _nameController.text.trim(),
-        owner: _ownerController.text.trim(),
-        imagePath: imagePath,
-        notes: _notesController.text.trim().isEmpty
-            ? null : _notesController.text.trim(),
+        name:       name,
+        owner:      _ownerController.text.trim(),
+        imagePath:  imagePath,
+        notes:      notes,
         categoryId: _selectedCategoryId,
       );
       if (mounted) {
@@ -64,11 +92,13 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
   @override
   Widget build(BuildContext context) {
     final categories = ref.watch(categoryProvider);
+    final autoFill   = ref.watch(settingsProvider).autoFill;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Nueva prenda'),
-        leading: IconButton(icon: const Icon(Icons.close), onPressed: () => context.pop()),
+        leading: IconButton(
+            icon: const Icon(Icons.close), onPressed: () => context.pop()),
         actions: [
           TextButton(
             onPressed: _isSaving ? null : _save,
@@ -115,7 +145,6 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
             ),
             const SizedBox(height: 16),
 
-            // ── Categoría (opcional) ─────────────────────────────────
             DropdownButtonFormField<String>(
               initialValue: _selectedCategoryId,
               decoration: const InputDecoration(
@@ -127,9 +156,7 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
               items: [
                 const DropdownMenuItem(value: null, child: Text('Sin categoría')),
                 ...categories.map((cat) => DropdownMenuItem(
-                  value: cat.id,
-                  child: Text(cat.name),
-                )),
+                  value: cat.id, child: Text(cat.name))),
               ],
               onChanged: (v) => setState(() => _selectedCategoryId = v),
             ),
@@ -137,11 +164,20 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
 
             TextFormField(
               controller: _notesController,
-              decoration: const InputDecoration(
-                labelText: 'Notas (opcional)',
-                hintText: 'Ej: Lavar en frío, no centrifugar',
-                prefixIcon: Icon(Icons.notes_outlined),
-                border: OutlineInputBorder(),
+              decoration: InputDecoration(
+                labelText: autoFill
+                    ? 'Notas (se generará automáticamente si está vacío)'
+                    : 'Notas (opcional)',
+                hintText: autoFill
+                    ? 'Dejar vacío para generar automáticamente'
+                    : 'Ej: Lavar en frío, no centrifugar',
+                prefixIcon: const Icon(Icons.notes_outlined),
+                border: const OutlineInputBorder(),
+                suffixIcon: autoFill
+                    ? const Tooltip(
+                        message: 'El relleno automático está activado',
+                        child: Icon(Icons.auto_awesome, size: 18))
+                    : null,
               ),
               maxLines: 3,
               textCapitalization: TextCapitalization.sentences,
@@ -156,4 +192,6 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
     );
   }
 }
+
+
 

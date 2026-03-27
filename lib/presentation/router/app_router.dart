@@ -9,6 +9,7 @@ import 'package:laundry_manager/presentation/screens/edit_garment_screen.dart';
 import 'package:laundry_manager/presentation/screens/garment_detail_screen.dart';
 import 'package:laundry_manager/presentation/screens/garment_list_screen.dart';
 import 'package:laundry_manager/presentation/screens/search_screen.dart';
+import 'package:laundry_manager/presentation/screens/settings_screen.dart';
 
 abstract final class AppRoutes {
   static const list       = '/';
@@ -17,6 +18,7 @@ abstract final class AppRoutes {
   static const edit       = '/edit/:id';
   static const search     = '/search';
   static const categories = '/categories';
+  static const settings   = '/settings';
 
   static String detailPath(String id) => '/detail/$id';
   static String editPath(String id)   => '/edit/$id';
@@ -29,6 +31,7 @@ final appRouter = GoRouter(
     GoRoute(path: AppRoutes.add,        builder: (_, __) => const AddGarmentScreen()),
     GoRoute(path: AppRoutes.search,     builder: (_, __) => const SearchScreen()),
     GoRoute(path: AppRoutes.categories, builder: (_, __) => const CategoriesScreen()),
+    GoRoute(path: AppRoutes.settings,   builder: (_, __) => const SettingsScreen()),
     GoRoute(
       path: AppRoutes.detail,
       builder: (context, state) =>
