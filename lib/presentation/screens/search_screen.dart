@@ -38,10 +38,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           g.owner.toLowerCase().contains(_query.toLowerCase());
 
       // Filtro de categoria
-      final matchesCategory = _selectedCategoryId == null ||
-          (_selectedCategoryId == _kNoCategoryId
-              ? g.categoryId == null
-              : g.categoryId == _selectedCategoryId);
+      final matchesCategory = _selectedCategoryId == null
+          ? true
+          : _selectedCategoryId == _kNoCategoryId
+              ? (g.categoryId == null || g.categoryId!.isEmpty)
+              : g.categoryId == _selectedCategoryId;
 
       return matchesQuery && matchesCategory;
     }).toList();
@@ -217,3 +218,4 @@ class _CategoryChip extends StatelessWidget {
     );
   }
 }
+

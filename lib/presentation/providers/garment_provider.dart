@@ -88,7 +88,7 @@ class GarmentNotifier extends AsyncNotifier<List<GarmentEntity>> {
           return e.id == id ? e.copyWithStatus(to) : e;
         }).toList();
         state = AsyncData(updatedOptimistic);
-        await Future.delayed(const Duration(seconds: 2));
+        await Future.delayed(const Duration(seconds: 1));
         state = AsyncData(_sorted(updatedOptimistic));
       },
     );
@@ -142,6 +142,7 @@ final garmentNotifierProvider =
     AsyncNotifierProvider<GarmentNotifier, List<GarmentEntity>>(
   GarmentNotifier.new,
 );
+
 
 
 

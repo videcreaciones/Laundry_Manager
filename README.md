@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/banner.png" alt="Laundry Manager Banner" width="800"/>
+</p>
+
 # 👔 Laundry Manager
 
 Aplicación móvil Android para gestionar el ciclo de vida de prendas enviadas a lavandería. Permite registrar prendas, rastrear su estado y confirmar su devolución, con persistencia local y sin necesidad de conexión a internet.
