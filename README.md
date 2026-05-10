@@ -39,14 +39,6 @@ La app se actualiza automáticamente — cuando haya una nueva versión te apare
 
 Construida con Flutter y Clean Architecture, Riverpod para el estado, Hive para la persistencia local y fpdart para el manejo de errores.
 
-## 🤖 Desarrollada con IA
-
-Este proyecto fue desarrollado con un flujo de trabajo asistido por inteligencia artificial:
-
-- **NotebookLM** — estructura del prompt y especificación técnica inicial
-- **Claude (Anthropic)** — generación del código, arquitectura y tests
-- **ChatGPT** — resolución de errores menores durante la implementación
-
 ## 📄 Licencia
 
 The Unlicense — úsala, modifícala, compártela. Es tuya.
