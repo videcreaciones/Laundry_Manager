@@ -6,10 +6,10 @@ import 'package:go_router/go_router.dart';
 import 'package:laundry_manager/domain/entities/garment_entity.dart';
 import 'package:laundry_manager/presentation/providers/category_provider.dart';
 import 'package:laundry_manager/presentation/providers/garment_provider.dart';
+import 'package:laundry_manager/presentation/providers/settings_provider.dart';
 import 'package:laundry_manager/presentation/router/app_router.dart';
 import 'package:laundry_manager/presentation/widgets/garment_card_widget.dart';
 
-// Sentinel para filtrar prendas sin categoria
 const _kNoCategoryId = '__none__';
 
 class SearchScreen extends ConsumerStatefulWidget {
@@ -22,7 +22,8 @@ class SearchScreen extends ConsumerStatefulWidget {
 class _SearchScreenState extends ConsumerState<SearchScreen> {
   final _searchController = TextEditingController();
   String _query = '';
-  String? _selectedCategoryId; // null = Todos, _kNoCategoryId = Sin categoria
+  String? _selectedCategoryId;
+  String? _selectedOwner;
 
   @override
   void dispose() {
@@ -32,19 +33,17 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
   List<GarmentEntity> _filtered(List<GarmentEntity> all) {
     return all.where((g) {
-      // Filtro de texto
       final matchesQuery = _query.isEmpty ||
           g.name.toLowerCase().contains(_query.toLowerCase()) ||
           g.owner.toLowerCase().contains(_query.toLowerCase());
-
-      // Filtro de categoria
       final matchesCategory = _selectedCategoryId == null
           ? true
           : _selectedCategoryId == _kNoCategoryId
               ? (g.categoryId == null || g.categoryId!.isEmpty)
               : g.categoryId == _selectedCategoryId;
-
-      return matchesQuery && matchesCategory;
+      final matchesOwner = _selectedOwner == null ||
+          g.owner.toLowerCase() == _selectedOwner!.toLowerCase();
+      return matchesQuery && matchesCategory && matchesOwner;
     }).toList();
   }
 
@@ -52,13 +51,19 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   Widget build(BuildContext context) {
     final garmentsAsync = ref.watch(garmentNotifierProvider);
     final categories    = ref.watch(categoryProvider);
+    final settings      = ref.watch(settingsProvider);
     final theme         = Theme.of(context);
+
+    final allOwners = (garmentsAsync.value ?? [])
+        .map((g) => g.owner)
+        .toSet()
+        .toList()
+      ..sort();
 
     return Scaffold(
       appBar: AppBar(title: const Text('Buscar prendas')),
       body: Column(
         children: [
-          // ── Barra de búsqueda ──────────────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
             child: TextField(
@@ -73,8 +78,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         onPressed: () {
                           _searchController.clear();
                           setState(() => _query = '');
-                        },
-                      )
+                        })
                     : null,
                 border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12)),
@@ -84,50 +88,76 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             ),
           ),
 
-          // ── Chips de categoría ─────────────────────────────────────
-          SizedBox(
-            height: 48,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              children: [
-                // Todos
-                _CategoryChip(
-                  label: 'Todos',
-                  selected: _selectedCategoryId == null,
-                  onTap: () => setState(() => _selectedCategoryId = null),
-                ),
-                // Sin categoría
-                _CategoryChip(
-                  label: 'Sin categoría',
-                  selected: _selectedCategoryId == _kNoCategoryId,
-                  onTap: () => setState(() =>
-                    _selectedCategoryId = _selectedCategoryId == _kNoCategoryId
-                        ? null : _kNoCategoryId),
-                ),
-                // Categorías del usuario
-                ...categories.map((cat) => _CategoryChip(
-                  label: cat.name,
-                  selected: _selectedCategoryId == cat.id,
-                  onTap: () => setState(() =>
-                    _selectedCategoryId = _selectedCategoryId == cat.id
-                        ? null : cat.id),
-                )),
-              ],
+          // Filtro por usuario — solo en modo empresa
+          if (settings.companyMode && allOwners.isNotEmpty)
+            SizedBox(
+              height: 48,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 8),
+                children: [
+                  _FilterChip(
+                    label: 'Todos',
+                    selected: _selectedOwner == null,
+                    onTap: () => setState(() => _selectedOwner = null),
+                  ),
+                  ...allOwners.map((owner) => _FilterChip(
+                    label: owner,
+                    selected: _selectedOwner == owner,
+                    onTap: () => setState(() =>
+                        _selectedOwner =
+                            _selectedOwner == owner ? null : owner),
+                  )),
+                ],
+              ),
             ),
-          ),
+
+          // Filtro por categoría
+          if (categories.isNotEmpty)
+            SizedBox(
+              height: 48,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 8),
+                children: [
+                  _FilterChip(
+                    label: 'Todas las categorias',
+                    selected: _selectedCategoryId == null,
+                    onTap: () =>
+                        setState(() => _selectedCategoryId = null),
+                  ),
+                  _FilterChip(
+                    label: 'Sin categoria',
+                    selected: _selectedCategoryId == _kNoCategoryId,
+                    onTap: () => setState(() => _selectedCategoryId =
+                        _selectedCategoryId == _kNoCategoryId
+                            ? null
+                            : _kNoCategoryId),
+                  ),
+                  ...categories.map((cat) => _FilterChip(
+                    label: cat.name,
+                    selected: _selectedCategoryId == cat.id,
+                    onTap: () => setState(() => _selectedCategoryId =
+                        _selectedCategoryId == cat.id ? null : cat.id),
+                  )),
+                ],
+              ),
+            ),
 
           const Divider(height: 1),
 
-          // ── Resultados ─────────────────────────────────────────────
           Expanded(
             child: garmentsAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () =>
+                  const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(child: Text('Error: $e')),
               data: (garments) {
                 final filtered = _filtered(garments);
-
-                if (_query.isEmpty && _selectedCategoryId == null) {
+                if (_query.isEmpty &&
+                    _selectedCategoryId == null &&
+                    _selectedOwner == null) {
                   return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -135,14 +165,17 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         Icon(Icons.search, size: 64,
                             color: theme.colorScheme.outlineVariant),
                         const SizedBox(height: 12),
-                        Text('Escribe o selecciona una categoría',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant)),
+                        Text(
+                          settings.companyMode
+                              ? 'Escribe o filtra por usuario o categoria'
+                              : 'Escribe o selecciona una categoria',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant),
+                        ),
                       ],
                     ),
                   );
                 }
-
                 if (filtered.isEmpty) {
                   return Center(
                     child: Column(
@@ -158,7 +191,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     ),
                   );
                 }
-
                 return ListView.builder(
                   padding: const EdgeInsets.only(top: 8, bottom: 80),
                   itemCount: filtered.length,
@@ -179,12 +211,12 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 }
 
-class _CategoryChip extends StatelessWidget {
+class _FilterChip extends StatelessWidget {
   final String label;
   final bool selected;
   final VoidCallback onTap;
 
-  const _CategoryChip({
+  const _FilterChip({
     required this.label,
     required this.selected,
     required this.onTap,
@@ -206,17 +238,14 @@ class _CategoryChip extends StatelessWidget {
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(label,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-            color: selected
-                ? theme.colorScheme.onPrimary
-                : theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: selected
+                  ? theme.colorScheme.onPrimary
+                  : theme.colorScheme.onSurfaceVariant,
+            )),
       ),
     );
   }
 }
-
-
