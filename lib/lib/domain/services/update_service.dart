@@ -4,11 +4,11 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:open_file/open_file.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 
-const String _kGithubOwner    = 'videcreaciones';
-const String _kGithubRepo     = 'Laundry_Manager';
-const String _kCurrentVersion = '1.3.0';
+const String _kGithubOwner = 'videcreaciones';
+const String _kGithubRepo  = 'Laundry_Manager';
 
 class ReleaseInfo {
   final String version;
@@ -27,6 +27,10 @@ final class UpdateService {
 
   Future<ReleaseInfo?> checkForUpdate() async {
     try {
+      // Version actual leida dinamicamente desde pubspec.yaml
+      final packageInfo    = await PackageInfo.fromPlatform();
+      final currentVersion = packageInfo.version;
+
       final url = Uri.parse(
         'https://api.github.com/repos/$_kGithubOwner/$_kGithubRepo/releases/latest',
       );
@@ -36,10 +40,10 @@ final class UpdateService {
 
       if (response.statusCode != 200) return null;
 
-      final data    = jsonDecode(response.body) as Map<String, dynamic>;
-      final latest  = (data['tag_name'] as String).replaceAll('v', '');
-      final body    = data['body'] as String? ?? '';
-      final assets  = data['assets'] as List<dynamic>;
+      final data   = jsonDecode(response.body) as Map<String, dynamic>;
+      final latest = (data['tag_name'] as String).replaceAll('v', '');
+      final body   = data['body'] as String? ?? '';
+      final assets = data['assets'] as List<dynamic>;
 
       final apkAsset = assets.firstWhere(
         (a) => (a['name'] as String).endsWith('.apk'),
@@ -49,7 +53,7 @@ final class UpdateService {
 
       final downloadUrl = apkAsset['browser_download_url'] as String;
 
-      return _isNewer(latest, _kCurrentVersion)
+      return _isNewer(latest, currentVersion)
           ? ReleaseInfo(version: latest, body: body, downloadUrl: downloadUrl)
           : null;
     } catch (_) {
