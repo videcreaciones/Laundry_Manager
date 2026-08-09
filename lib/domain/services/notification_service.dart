@@ -68,23 +68,28 @@ class NotificationService {
     );
     const details = NotificationDetails(android: androidDetails);
 
-    await _plugin.zonedSchedule(
-      _notificationId(garmentId),
-      'Recordatorio de lavado',
-      'Es hora de lavar: $garmentName',
-      scheduledDate,
-      details,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-      // Inexacto: no requiere el permiso especial de alarmas exactas de
-      // Android 12+, tolera algunos minutos de margen — de sobra para un
-      // recordatorio de lavado.
-      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-      matchDateTimeComponents: reminder.type == WashReminderType.monthlyOnDay
-          ? DateTimeComponents.dayOfMonthAndTime
-          : null,
-      payload: garmentId,
-    );
+    try {
+      await _plugin.zonedSchedule(
+        _notificationId(garmentId),
+        'Recordatorio de lavado',
+        'Es hora de lavar: $garmentName',
+        scheduledDate,
+        details,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        // Inexacto: no requiere el permiso especial de alarmas exactas de
+        // Android 12+, tolera algunos minutos de margen — de sobra para un
+        // recordatorio de lavado.
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        matchDateTimeComponents:
+            reminder.type == WashReminderType.monthlyOnDay
+                ? DateTimeComponents.dayOfMonthAndTime
+                : null,
+        payload: garmentId,
+      );
+    } catch (e) {
+      debugPrint('[NotificationService] ERROR agendando "$garmentName": $e');
+    }
   }
 
   static Future<void> cancelReminder(String garmentId) async {
