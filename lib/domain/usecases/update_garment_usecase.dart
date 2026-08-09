@@ -34,6 +34,7 @@ final class UpdateGarmentUseCase {
       imagePath:  imagePath,
       notes:      notes?.trim().isEmpty == true ? null : notes?.trim(),
       categoryId: categoryId,   // ← persiste el nuevo valor (puede ser null)
+      reminder:   original.reminder, // editar la prenda no debe borrar el recordatorio
       createdAt:  original.createdAt,
       updatedAt:  DateTime.now(),
     );

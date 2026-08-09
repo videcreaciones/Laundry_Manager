@@ -1,8 +1,10 @@
 ﻿library;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:laundry_manager/domain/entities/garment_entity.dart';
+import 'package:laundry_manager/presentation/providers/garment_provider.dart';
 import 'package:laundry_manager/presentation/screens/add_garment_screen.dart';
 import 'package:laundry_manager/presentation/screens/categories_screen.dart';
 import 'package:laundry_manager/presentation/screens/edit_garment_screen.dart';
@@ -34,8 +36,15 @@ final appRouter = GoRouter(
     GoRoute(path: AppRoutes.settings,   builder: (_, __) => const SettingsScreen()),
     GoRoute(
       path: AppRoutes.detail,
-      builder: (context, state) =>
-          GarmentDetailScreen(garment: state.extra as GarmentEntity),
+      builder: (context, state) {
+        final extra = state.extra;
+        if (extra is GarmentEntity) {
+          return GarmentDetailScreen(garment: extra);
+        }
+        // Sin `extra` (ej. se abrio desde una notificacion) — buscar la
+        // prenda por id una vez que la lista cargue.
+        return _GarmentDetailById(id: state.pathParameters['id']!);
+      },
     ),
     GoRoute(
       path: AppRoutes.edit,
@@ -47,3 +56,33 @@ final appRouter = GoRouter(
     body: Center(child: Text('Ruta no encontrada: ${state.uri}')),
   ),
 );
+
+/// Carga una prenda por id desde el estado ya cacheado del provider —
+/// usado cuando se navega al detalle sin pasar la entidad por `extra`
+/// (deep link desde una notificacion, por ejemplo).
+class _GarmentDetailById extends ConsumerWidget {
+  final String id;
+  const _GarmentDetailById({required this.id});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final garmentsAsync = ref.watch(garmentNotifierProvider);
+    return garmentsAsync.when(
+      loading: () => const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      ),
+      error: (_, __) => Scaffold(
+        body: Center(child: Text('No se pudo cargar la prenda "$id"')),
+      ),
+      data: (garments) {
+        final garment = garments.where((g) => g.id == id).firstOrNull;
+        if (garment == null) {
+          return const Scaffold(
+            body: Center(child: Text('Prenda no encontrada')),
+          );
+        }
+        return GarmentDetailScreen(garment: garment);
+      },
+    );
+  }
+}

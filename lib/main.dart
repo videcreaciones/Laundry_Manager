@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:laundry_manager/data/models/garment_model.dart';
+import 'package:laundry_manager/domain/services/notification_service.dart';
 import 'package:laundry_manager/injection_container.dart';
 import 'package:laundry_manager/presentation/providers/category_provider.dart';
 import 'package:laundry_manager/presentation/providers/settings_provider.dart';
@@ -12,6 +13,7 @@ import 'package:path_provider/path_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await NotificationService.init();
   final appDocDir = await getApplicationDocumentsDirectory();
   await Hive.initFlutter(appDocDir.path);
 
@@ -38,11 +40,39 @@ void main() async {
   );
 }
 
-class LaundryManagerApp extends ConsumerWidget {
+class LaundryManagerApp extends ConsumerStatefulWidget {
   const LaundryManagerApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<LaundryManagerApp> createState() => _LaundryManagerAppState();
+}
+
+class _LaundryManagerAppState extends ConsumerState<LaundryManagerApp> {
+  @override
+  void initState() {
+    super.initState();
+    NotificationService.tappedGarmentId.addListener(_onNotificationTapped);
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final launchPayload = await NotificationService.consumeLaunchPayload();
+      if (launchPayload != null) {
+        appRouter.go(AppRoutes.detailPath(launchPayload));
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    NotificationService.tappedGarmentId.removeListener(_onNotificationTapped);
+    super.dispose();
+  }
+
+  void _onNotificationTapped() {
+    final id = NotificationService.tappedGarmentId.value;
+    if (id != null) appRouter.go(AppRoutes.detailPath(id));
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
     return MaterialApp.router(
       title: 'Laundry Manager',

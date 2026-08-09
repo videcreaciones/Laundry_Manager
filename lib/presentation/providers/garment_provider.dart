@@ -2,8 +2,10 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:laundry_manager/domain/entities/garment_entity.dart';
+import 'package:laundry_manager/domain/services/notification_service.dart';
 import 'package:laundry_manager/domain/value_objects/garment_failure.dart';
 import 'package:laundry_manager/domain/value_objects/garment_status.dart';
+import 'package:laundry_manager/domain/value_objects/wash_reminder.dart';
 import 'package:laundry_manager/injection_container.dart';
 
 class GarmentException implements Exception {
@@ -49,7 +51,55 @@ class GarmentNotifier extends AsyncNotifier<List<GarmentEntity>> {
     final result = await ref.read(getAllGarmentsUseCaseProvider).execute();
     return result.fold(
       (failure) => throw GarmentException(failure),
-      (garments) => _sorted(garments),
+      (garments) {
+        final sorted = _sorted(garments);
+        // Re-sincroniza las notificaciones agendadas con las reglas
+        // actuales cada vez que se carga la lista (arranque de la app,
+        // pull-to-refresh, etc.) — barato e idempotente, y es lo que
+        // permite que "cada N dias" se vaya renovando solo.
+        _resyncReminders(sorted);
+        return sorted;
+      },
+    );
+  }
+
+  void _resyncReminders(List<GarmentEntity> garments) {
+    for (final garment in garments) {
+      final reminder = garment.reminder;
+      if (reminder == null) continue;
+      NotificationService.scheduleReminder(
+        garmentId: garment.id,
+        garmentName: garment.name,
+        reminder: reminder,
+      );
+    }
+  }
+
+  Future<void> setReminder({
+    required String id,
+    required WashReminder? reminder,
+  }) async {
+    final current = (state.value ?? []).where((e) => e.id == id).firstOrNull;
+    if (current == null) return;
+    final updated = current.copyWithReminder(reminder);
+
+    final result = await ref.read(garmentRepositoryProvider).update(updated);
+    result.fold(
+      (failure) => throw GarmentException(failure),
+      (_) {
+        state = AsyncData(_sorted(
+          (state.value ?? []).map((e) => e.id == id ? updated : e).toList(),
+        ));
+        if (reminder == null) {
+          NotificationService.cancelReminder(id);
+        } else {
+          NotificationService.scheduleReminder(
+            garmentId: id,
+            garmentName: updated.name,
+            reminder: reminder,
+          );
+        }
+      },
     );
   }
 

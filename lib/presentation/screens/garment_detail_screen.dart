@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:laundry_manager/domain/entities/garment_entity.dart';
 import 'package:laundry_manager/domain/value_objects/garment_status.dart';
+import 'package:laundry_manager/domain/value_objects/wash_reminder.dart';
 import 'package:laundry_manager/presentation/providers/category_provider.dart';
 import 'package:laundry_manager/presentation/providers/garment_provider.dart';
 import 'package:laundry_manager/presentation/router/app_router.dart';
@@ -13,6 +14,7 @@ import 'package:laundry_manager/presentation/providers/settings_provider.dart';
 import 'package:laundry_manager/presentation/widgets/glass/glass_container.dart';
 import 'package:laundry_manager/presentation/widgets/glass/glass_scaffold.dart';
 import 'package:laundry_manager/presentation/widgets/image_preview_widget.dart';
+import 'package:laundry_manager/presentation/widgets/reminder_picker.dart';
 import 'package:laundry_manager/presentation/widgets/status_action_button.dart';
 import 'package:laundry_manager/presentation/widgets/status_selector_widget.dart';
 
@@ -110,6 +112,31 @@ class _GarmentDetailScreenState extends ConsumerState<GarmentDetailScreen> {
     );
   }
 
+  Future<void> _handleConfigureReminder() async {
+    final garment = _currentGarment;
+    final result = await showReminderPicker(context, current: garment.reminder);
+    if (result == null || !mounted) return;
+    try {
+      await ref.read(garmentNotifierProvider.notifier).setReminder(
+        id: garment.id, reminder: result.reminder,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(result.reminder == null
+              ? 'Recordatorio eliminado'
+              : 'Recordatorio guardado')),
+        );
+      }
+    } on GarmentException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.userMessage),
+              backgroundColor: Theme.of(context).colorScheme.error),
+        );
+      }
+    }
+  }
+
   Future<void> _handleDelete() async {
     final garment = _currentGarment;
     if (garment.status == GarmentStatus.lavando) {
@@ -205,6 +232,11 @@ class _GarmentDetailScreenState extends ConsumerState<GarmentDetailScreen> {
                 ],
               ),
             ),
+            const SizedBox(height: 16),
+            _ReminderSection(
+              reminder: garment.reminder,
+              onTap: _handleConfigureReminder,
+            ),
             const SizedBox(height: 32),
             _buildStatusControl(garment, useSelector),
           ],
@@ -219,6 +251,35 @@ class _GarmentDetailScreenState extends ConsumerState<GarmentDetailScreen> {
       '${date.year} '
       '${date.hour.toString().padLeft(2, '0')}:'
       '${date.minute.toString().padLeft(2, '0')}';
+}
+
+class _ReminderSection extends StatelessWidget {
+  final WashReminder? reminder;
+  final VoidCallback onTap;
+  const _ReminderSection({required this.reminder, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return GlassContainer(
+      blurBackground: false,
+      child: ListTile(
+        leading: Icon(
+          reminder != null ? Icons.notifications_active_outlined
+                            : Icons.notifications_none_outlined,
+          color: reminder != null
+              ? theme.colorScheme.primary
+              : theme.colorScheme.onSurfaceVariant,
+        ),
+        title: const Text('Recordatorio de lavado'),
+        subtitle: Text(reminder != null
+            ? '${reminder!.label} · ${reminder!.timeLabel}'
+            : 'Sin recordatorio configurado'),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: onTap,
+      ),
+    );
+  }
 }
 
 class _CategoryInfoTile extends ConsumerWidget {

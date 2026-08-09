@@ -3,6 +3,7 @@
 import 'package:fpdart/fpdart.dart';
 import 'package:laundry_manager/domain/value_objects/garment_failure.dart';
 import 'package:laundry_manager/domain/value_objects/garment_status.dart';
+import 'package:laundry_manager/domain/value_objects/wash_reminder.dart';
 
 final class GarmentEntity {
   final String id;
@@ -14,6 +15,7 @@ final class GarmentEntity {
   final DateTime updatedAt;
   final String? notes;
   final String? categoryId; // NUEVO — opcional
+  final WashReminder? reminder;
 
   const GarmentEntity._({
     required this.id,
@@ -25,6 +27,7 @@ final class GarmentEntity {
     this.imagePath,
     this.notes,
     this.categoryId,
+    this.reminder,
   });
 
   static Either<GarmentFailure, GarmentEntity> create({
@@ -65,10 +68,12 @@ final class GarmentEntity {
     String? imagePath,
     String? notes,
     String? categoryId,
+    WashReminder? reminder,
   }) {
     return GarmentEntity._(
       id: id, name: name, owner: owner, status: status,
       imagePath: imagePath, notes: notes, categoryId: categoryId,
+      reminder: reminder,
       createdAt: createdAt, updatedAt: updatedAt,
     );
   }
@@ -77,6 +82,17 @@ final class GarmentEntity {
     return GarmentEntity._(
       id: id, name: name, owner: owner, status: newStatus,
       imagePath: imagePath, notes: notes, categoryId: categoryId,
+      reminder: reminder,
+      createdAt: createdAt, updatedAt: DateTime.now(),
+    );
+  }
+
+  /// [reminder] null explícitamente quita el recordatorio activo.
+  GarmentEntity copyWithReminder(WashReminder? reminder) {
+    return GarmentEntity._(
+      id: id, name: name, owner: owner, status: status,
+      imagePath: imagePath, notes: notes, categoryId: categoryId,
+      reminder: reminder,
       createdAt: createdAt, updatedAt: DateTime.now(),
     );
   }

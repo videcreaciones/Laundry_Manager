@@ -80,6 +80,24 @@ class MockIGarmentRepository extends _i1.Mock
       ) as _i3.Future<_i4.Either<_i5.GarmentFailure, _i4.Unit>>);
 
   @override
+  _i3.Future<_i4.Either<_i5.GarmentFailure, _i4.Unit>> update(
+          _i6.GarmentEntity? garment) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #update,
+          [garment],
+        ),
+        returnValue: _i3.Future<_i4.Either<_i5.GarmentFailure, _i4.Unit>>.value(
+            _i7.dummyValue<_i4.Either<_i5.GarmentFailure, _i4.Unit>>(
+          this,
+          Invocation.method(
+            #update,
+            [garment],
+          ),
+        )),
+      ) as _i3.Future<_i4.Either<_i5.GarmentFailure, _i4.Unit>>);
+
+  @override
   _i3.Future<_i4.Either<_i5.GarmentFailure, _i4.Unit>> updateStatus(
     String? id,
     _i8.GarmentStatus? newStatus,
