@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:laundry_manager/domain/value_objects/wash_reminder.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
@@ -18,6 +19,11 @@ class NotificationService {
 
   static Future<void> init() async {
     tz.initializeTimeZones();
+    // Sin esto, tz.local queda en UTC por defecto y todos los recordatorios
+    // se agendan a la hora equivocada (desfasados por el huso horario del
+    // dispositivo, en vez de a la hora local que el usuario eligio).
+    final deviceTimezone = await FlutterTimezone.getLocalTimezone();
+    tz.setLocalLocation(tz.getLocation(deviceTimezone));
 
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
     const settings = InitializationSettings(android: android);
