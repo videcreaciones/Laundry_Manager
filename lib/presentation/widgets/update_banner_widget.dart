@@ -41,17 +41,25 @@ class _UpdateBannerState extends ConsumerState<_UpdateBanner> {
     setState(() { _downloading = true; _progress = 0; });
 
     final service = ref.read(updateServiceProvider);
-    final success = await service.downloadAndInstall(
+    final result = await service.downloadAndInstall(
       widget.release.downloadUrl,
       onProgress: (p) {
         if (mounted) setState(() => _progress = p);
       },
     );
 
-    if (mounted && !success) {
+    if (mounted && result != UpdateInstallResult.success) {
       setState(() => _downloading = false);
+      final message = switch (result) {
+        UpdateInstallResult.downloadFailed =>
+          'Error al descargar la actualización. Revisa tu conexión e intenta de nuevo.',
+        UpdateInstallResult.permissionDenied =>
+          'Habilita "Instalar apps desconocidas" para Laundry Manager en '
+              'los ajustes de tu celular y vuelve a intentar.',
+        _ => 'No se pudo instalar la actualización.',
+      };
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Error al descargar la actualización')),
+        SnackBar(content: Text(message)),
       );
     }
   }

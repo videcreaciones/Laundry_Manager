@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:laundry_manager/presentation/providers/image_picker_provider.dart';
+import 'package:laundry_manager/presentation/screens/image_viewer_screen.dart';
 import 'package:laundry_manager/presentation/widgets/glass/glass_container.dart';
 
 class ImagePreviewWidget extends ConsumerWidget {
@@ -21,11 +22,20 @@ class ImagePreviewWidget extends ConsumerWidget {
     final selectedPath = ref.watch(imagePickerProvider);
     final imagePath = selectedPath ?? existingImagePath;
     final theme = Theme.of(context);
+    final hasImage = imagePath != null && File(imagePath).existsSync();
+    final heroTag = 'garment-image-$imagePath';
 
     return GestureDetector(
       onTap: editable
           ? () => showImagePickerSheet(context, ref)
-          : null,
+          : (hasImage
+              ? () => Navigator.of(context).push(MaterialPageRoute(
+                    builder: (_) => ImageViewerScreen(
+                      imagePath: imagePath,
+                      heroTag: heroTag,
+                    ),
+                  ))
+              : null),
       child: GlassContainer(
         borderRadius: BorderRadius.circular(12),
         blurBackground: false,
@@ -35,7 +45,8 @@ class ImagePreviewWidget extends ConsumerWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              _buildImageContent(context, imagePath, theme),
+              _buildImageContent(context, imagePath, theme,
+                  heroTag: editable ? null : heroTag),
               if (editable)
                 Positioned(
                   bottom: 8,
@@ -76,10 +87,16 @@ class ImagePreviewWidget extends ConsumerWidget {
     );
   }
 
-  Widget _buildImageContent(BuildContext context, String? imagePath, ThemeData theme) {
+  Widget _buildImageContent(
+    BuildContext context,
+    String? imagePath,
+    ThemeData theme, {
+    String? heroTag,
+  }) {
     if (imagePath != null && File(imagePath).existsSync()) {
-      return Image.file(File(imagePath), fit: BoxFit.cover,
+      final image = Image.file(File(imagePath), fit: BoxFit.cover,
           errorBuilder: (_, __, ___) => _buildPlaceholder(theme));
+      return heroTag != null ? Hero(tag: heroTag, child: image) : image;
     }
     return _buildPlaceholder(theme);
   }

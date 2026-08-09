@@ -10,6 +10,8 @@ import 'package:path_provider/path_provider.dart';
 const String _kGithubOwner = 'videcreaciones';
 const String _kGithubRepo  = 'Laundry_Manager';
 
+enum UpdateInstallResult { success, downloadFailed, permissionDenied, installFailed }
+
 class ReleaseInfo {
   final String version;
   final String body;
@@ -61,14 +63,15 @@ final class UpdateService {
     }
   }
 
-  Future<bool> downloadAndInstall(
+  Future<UpdateInstallResult> downloadAndInstall(
     String downloadUrl, {
     required void Function(double progress) onProgress,
   }) async {
+    final String apkPath;
     try {
       final tempDir = await getTemporaryDirectory();
-      final apkPath = '${tempDir.path}/laundry_manager_update.apk';
-      final file    = File(apkPath);
+      apkPath = '${tempDir.path}/laundry_manager_update.apk';
+      final file = File(apkPath);
 
       final client   = http.Client();
       final request  = http.Request('GET', Uri.parse(downloadUrl));
@@ -84,11 +87,22 @@ final class UpdateService {
       }
       await sink.close();
       client.close();
-
-      final result = await OpenFile.open(apkPath);
-      return result.type == ResultType.done;
     } catch (_) {
-      return false;
+      return UpdateInstallResult.downloadFailed;
+    }
+
+    try {
+      final result = await OpenFile.open(apkPath);
+      switch (result.type) {
+        case ResultType.done:
+          return UpdateInstallResult.success;
+        case ResultType.permissionDenied:
+          return UpdateInstallResult.permissionDenied;
+        default:
+          return UpdateInstallResult.installFailed;
+      }
+    } catch (_) {
+      return UpdateInstallResult.installFailed;
     }
   }
 
