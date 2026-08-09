@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:laundry_manager/presentation/providers/image_picker_provider.dart';
+import 'package:laundry_manager/presentation/widgets/glass/glass_container.dart';
 
 class ImagePreviewWidget extends ConsumerWidget {
   final bool editable;
@@ -25,16 +26,12 @@ class ImagePreviewWidget extends ConsumerWidget {
       onTap: editable
           ? () => showImagePickerSheet(context, ref)
           : null,
-      child: Container(
-        width: double.infinity,
-        height: 200,
-        decoration: BoxDecoration(
-          color: theme.colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: theme.colorScheme.outlineVariant),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(11),
+      child: GlassContainer(
+        borderRadius: BorderRadius.circular(12),
+        blurBackground: false,
+        child: SizedBox(
+          width: double.infinity,
+          height: 200,
           child: Stack(
             fit: StackFit.expand,
             children: [

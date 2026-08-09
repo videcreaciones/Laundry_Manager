@@ -10,6 +10,7 @@ build/
 
 # Android
 android/.gradle/
+android/.kotlin/
 android/local.properties
 android/captures/
 android/key.properties

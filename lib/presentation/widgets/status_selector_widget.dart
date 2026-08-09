@@ -50,6 +50,8 @@ class StatusSelectorWidget extends StatelessWidget {
                   onPressed: isLoading || isSelected
                       ? null
                       : () => onSelected(status),
+                  // Selector libre: cualquier estado es alcanzable, sin
+                  // validar la secuencia (eso lo hace forceUpdateStatus).
                   child: Text(
                     status.shortLabel,
                     style: const TextStyle(fontSize: 11),

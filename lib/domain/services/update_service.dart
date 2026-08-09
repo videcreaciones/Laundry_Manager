@@ -4,11 +4,11 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:open_file/open_file.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
 
-const String _kGithubOwner    = 'videcreaciones';
-const String _kGithubRepo     = 'Laundry_Manager';
-const String _kCurrentVersion = '1.3.0';
+const String _kGithubOwner = 'videcreaciones';
+const String _kGithubRepo  = 'Laundry_Manager';
 
 class ReleaseInfo {
   final String version;
@@ -49,7 +49,11 @@ final class UpdateService {
 
       final downloadUrl = apkAsset['browser_download_url'] as String;
 
-      return _isNewer(latest, _kCurrentVersion)
+      // Version actual leida dinamicamente desde pubspec.yaml
+      final packageInfo    = await PackageInfo.fromPlatform();
+      final currentVersion = packageInfo.version;
+
+      return _isNewer(latest, currentVersion)
           ? ReleaseInfo(version: latest, body: body, downloadUrl: downloadUrl)
           : null;
     } catch (_) {

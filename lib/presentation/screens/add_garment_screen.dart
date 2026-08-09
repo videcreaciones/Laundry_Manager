@@ -8,6 +8,7 @@ import 'package:laundry_manager/presentation/providers/garment_provider.dart';
 import 'package:laundry_manager/presentation/providers/image_picker_provider.dart';
 import 'package:laundry_manager/domain/services/auto_description_service.dart';
 import 'package:laundry_manager/presentation/providers/settings_provider.dart';
+import 'package:laundry_manager/presentation/widgets/glass/glass_scaffold.dart';
 import 'package:laundry_manager/presentation/widgets/image_preview_widget.dart';
 
 class AddGarmentScreen extends ConsumerStatefulWidget {
@@ -28,9 +29,17 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
   @override
   void initState() {
     super.initState();
-    // Limpiar imagen al entrar — siempre empieza sin foto
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Limpiar imagen al entrar — siempre empieza sin foto
       ref.read(imagePickerProvider.notifier).clearImage();
+
+      // Auto-rellenar propietario si está configurado (modo usuario único)
+      final settings = ref.read(settingsProvider);
+      if (!settings.companyMode &&
+          settings.autoFillOwner &&
+          settings.singleUserName.trim().isNotEmpty) {
+        _ownerController.text = settings.singleUserName.trim();
+      }
     });
   }
 
@@ -58,17 +67,22 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isSaving = true);
 
+    final settings   = ref.read(settingsProvider);
     final imagePath  = ref.read(imagePickerProvider);
-    final autoFill   = ref.read(settingsProvider).autoFill;
     final name       = _nameController.text.trim();
     final notes      = _notesController.text.trim().isEmpty
-        ? (autoFill ? _generateDescription(name, _selectedCategoryId) : null)
+        ? (settings.autoFill ? _generateDescription(name, _selectedCategoryId) : null)
         : _notesController.text.trim();
+
+    // Si el campo estaba oculto/vacío, se usa el nombre de usuario único
+    final owner = _ownerController.text.trim().isNotEmpty
+        ? _ownerController.text.trim()
+        : settings.singleUserName.trim();
 
     try {
       await ref.read(garmentNotifierProvider.notifier).addGarment(
         name:       name,
-        owner:      _ownerController.text.trim(),
+        owner:      owner,
         imagePath:  imagePath,
         notes:      notes,
         categoryId: _selectedCategoryId,
@@ -92,23 +106,31 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
   @override
   Widget build(BuildContext context) {
     final categories = ref.watch(categoryProvider);
-    final autoFill   = ref.watch(settingsProvider).autoFill;
+    final settings   = ref.watch(settingsProvider);
+    final autoFill   = settings.autoFill;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Nueva prenda'),
-        leading: IconButton(
-            icon: const Icon(Icons.close), onPressed: () => context.pop()),
-        actions: [
-          TextButton(
-            onPressed: _isSaving ? null : _save,
-            child: _isSaving
-                ? const SizedBox(width: 16, height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2))
-                : const Text('Guardar'),
-          ),
-        ],
-      ),
+    // El campo propietario se oculta solo si: hay modo usuario único
+    // configurado con auto-relleno activo Y con un nombre real que usar,
+    // Y el usuario no pidió explícitamente seguir viéndolo.
+    final effectiveAutoFillOwner =
+        settings.autoFillOwner && settings.singleUserName.trim().isNotEmpty;
+    final showOwnerField = settings.companyMode ||
+        !effectiveAutoFillOwner ||
+        settings.showOwnerField;
+
+    return GlassScaffold(
+      title: const Text('Nueva prenda'),
+      leading: IconButton(
+          icon: const Icon(Icons.close), onPressed: () => context.pop()),
+      actions: [
+        TextButton(
+          onPressed: _isSaving ? null : _save,
+          child: _isSaving
+              ? const SizedBox(width: 16, height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2))
+              : const Text('Guardar'),
+        ),
+      ],
       body: Form(
         key: _formKey,
         child: ListView(
@@ -131,19 +153,21 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
             ),
             const SizedBox(height: 16),
 
-            TextFormField(
-              controller: _ownerController,
-              decoration: const InputDecoration(
-                labelText: 'Propietario *',
-                hintText: 'Ej: Juan Pérez',
-                prefixIcon: Icon(Icons.person_outline),
-                border: OutlineInputBorder(),
+            if (showOwnerField) ...[
+              TextFormField(
+                controller: _ownerController,
+                decoration: const InputDecoration(
+                  labelText: 'Propietario *',
+                  hintText: 'Ej: Juan Pérez',
+                  prefixIcon: Icon(Icons.person_outline),
+                  border: OutlineInputBorder(),
+                ),
+                textCapitalization: TextCapitalization.words,
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? 'El propietario es requerido' : null,
               ),
-              textCapitalization: TextCapitalization.words,
-              validator: (v) => (v == null || v.trim().isEmpty)
-                  ? 'El propietario es requerido' : null,
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
+            ],
 
             DropdownButtonFormField<String>(
               initialValue: _selectedCategoryId,
@@ -183,9 +207,10 @@ class _AddGarmentScreenState extends ConsumerState<AddGarmentScreen> {
               textCapitalization: TextCapitalization.sentences,
             ),
             const SizedBox(height: 8),
-            Text('* Campos requeridos',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant)),
+            if (showOwnerField)
+              Text('* Campos requeridos',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant)),
           ],
         ),
       ),

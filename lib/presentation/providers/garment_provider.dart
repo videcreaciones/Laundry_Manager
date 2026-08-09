@@ -94,6 +94,28 @@ class GarmentNotifier extends AsyncNotifier<List<GarmentEntity>> {
     );
   }
 
+  // Cambia el estado sin validar la secuencia — para modo selector libre
+  Future<void> forceUpdateStatus({
+    required String id,
+    required GarmentStatus to,
+  }) async {
+    final previous = state;
+    state = AsyncData(
+      (state.value ?? []).map((e) => e.id == id ? e.copyWithStatus(to) : e).toList(),
+    );
+    final result = await ref.read(garmentRepositoryProvider).updateStatus(id, to);
+    await result.fold(
+      (failure) async {
+        state = previous;
+        throw GarmentException(failure);
+      },
+      (_) async {
+        await Future.delayed(const Duration(seconds: 1));
+        state = AsyncData(_sorted(state.value ?? []));
+      },
+    );
+  }
+
   Future<void> editGarment({
     required GarmentEntity original,
     required String name,

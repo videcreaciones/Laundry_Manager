@@ -62,6 +62,8 @@ class LaundryManagerApp extends ConsumerWidget {
         ),
         floatingActionButtonTheme:
             const FloatingActionButtonThemeData(elevation: 4),
+        inputDecorationTheme: _glassInputTheme(Brightness.light),
+        filledButtonTheme: _glassFilledButtonTheme,
       ),
       darkTheme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
@@ -78,8 +80,34 @@ class LaundryManagerApp extends ConsumerWidget {
         ),
         floatingActionButtonTheme:
             const FloatingActionButtonThemeData(elevation: 4),
+        inputDecorationTheme: _glassInputTheme(Brightness.dark),
+        filledButtonTheme: _glassFilledButtonTheme,
       ),
       routerConfig: appRouter,
     );
   }
 }
+
+InputDecorationTheme _glassInputTheme(Brightness brightness) {
+  final isDark = brightness == Brightness.dark;
+  final tint = isDark ? Colors.white : Colors.black;
+  final border = OutlineInputBorder(
+    borderRadius: BorderRadius.circular(14),
+    borderSide: BorderSide(color: tint.withValues(alpha: isDark ? 0.12 : 0.08)),
+  );
+  return InputDecorationTheme(
+    filled: true,
+    fillColor: Colors.white.withValues(alpha: isDark ? 0.06 : 0.55),
+    border: border,
+    enabledBorder: border,
+    focusedBorder: border.copyWith(
+      borderSide: const BorderSide(color: Color(0xFF1565C0), width: 1.5),
+    ),
+  );
+}
+
+final FilledButtonThemeData _glassFilledButtonTheme = FilledButtonThemeData(
+  style: FilledButton.styleFrom(
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+  ),
+);

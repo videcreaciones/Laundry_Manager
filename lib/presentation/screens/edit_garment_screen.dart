@@ -7,6 +7,8 @@ import 'package:laundry_manager/domain/entities/garment_entity.dart';
 import 'package:laundry_manager/presentation/providers/category_provider.dart';
 import 'package:laundry_manager/presentation/providers/garment_provider.dart';
 import 'package:laundry_manager/presentation/providers/image_picker_provider.dart';
+import 'package:laundry_manager/presentation/providers/settings_provider.dart';
+import 'package:laundry_manager/presentation/widgets/glass/glass_scaffold.dart';
 import 'package:laundry_manager/presentation/widgets/image_preview_widget.dart';
 
 class EditGarmentScreen extends ConsumerStatefulWidget {
@@ -50,11 +52,16 @@ class _EditGarmentScreenState extends ConsumerState<EditGarmentScreen> {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isSaving = true);
     final imagePath = ref.read(imagePickerProvider);
+    final settings  = ref.read(settingsProvider);
+    // Si el campo estaba oculto (owner sin tocar), usar el nombre de usuario único
+    final owner = _ownerController.text.trim().isNotEmpty
+        ? _ownerController.text.trim()
+        : settings.singleUserName.trim();
     try {
       await ref.read(garmentNotifierProvider.notifier).editGarment(
         original:   widget.garment,
         name:       _nameController.text.trim(),
-        owner:      _ownerController.text.trim(),
+        owner:      owner,
         imagePath:  imagePath,
         notes:      _notesController.text.trim().isEmpty
                         ? null : _notesController.text.trim(),
@@ -79,21 +86,26 @@ class _EditGarmentScreenState extends ConsumerState<EditGarmentScreen> {
   @override
   Widget build(BuildContext context) {
     final categories = ref.watch(categoryProvider);
+    final settings   = ref.watch(settingsProvider);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Editar prenda'),
-        leading: IconButton(icon: const Icon(Icons.close), onPressed: () => context.pop()),
-        actions: [
-          TextButton(
-            onPressed: _isSaving ? null : _save,
-            child: _isSaving
-                ? const SizedBox(width: 16, height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2))
-                : const Text('Guardar'),
-          ),
-        ],
-      ),
+    final effectiveAutoFillOwner =
+        settings.autoFillOwner && settings.singleUserName.trim().isNotEmpty;
+    final showOwnerField = settings.companyMode ||
+        !effectiveAutoFillOwner ||
+        settings.showOwnerField;
+
+    return GlassScaffold(
+      title: const Text('Editar prenda'),
+      leading: IconButton(icon: const Icon(Icons.close), onPressed: () => context.pop()),
+      actions: [
+        TextButton(
+          onPressed: _isSaving ? null : _save,
+          child: _isSaving
+              ? const SizedBox(width: 16, height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2))
+              : const Text('Guardar'),
+        ),
+      ],
       body: Form(
         key: _formKey,
         child: ListView(
@@ -115,18 +127,20 @@ class _EditGarmentScreenState extends ConsumerState<EditGarmentScreen> {
             ),
             const SizedBox(height: 16),
 
-            TextFormField(
-              controller: _ownerController,
-              decoration: const InputDecoration(
-                labelText: 'Propietario *',
-                prefixIcon: Icon(Icons.person_outline),
-                border: OutlineInputBorder(),
+            if (showOwnerField) ...[
+              TextFormField(
+                controller: _ownerController,
+                decoration: const InputDecoration(
+                  labelText: 'Propietario *',
+                  prefixIcon: Icon(Icons.person_outline),
+                  border: OutlineInputBorder(),
+                ),
+                textCapitalization: TextCapitalization.words,
+                validator: (v) => (v == null || v.trim().isEmpty)
+                    ? 'El propietario es requerido' : null,
               ),
-              textCapitalization: TextCapitalization.words,
-              validator: (v) => (v == null || v.trim().isEmpty)
-                  ? 'El propietario es requerido' : null,
-            ),
-            const SizedBox(height: 16),
+              const SizedBox(height: 16),
+            ],
 
             // ── Categoría (opcional) ──────────────────────────────────
             DropdownButtonFormField<String>(
@@ -159,9 +173,10 @@ class _EditGarmentScreenState extends ConsumerState<EditGarmentScreen> {
               textCapitalization: TextCapitalization.sentences,
             ),
             const SizedBox(height: 8),
-            Text('* Campos requeridos',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant)),
+            if (showOwnerField)
+              Text('* Campos requeridos',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant)),
           ],
         ),
       ),

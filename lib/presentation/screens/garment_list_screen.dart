@@ -1,13 +1,19 @@
 ﻿library;
 
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:laundry_manager/domain/entities/garment_entity.dart';
 import 'package:laundry_manager/domain/value_objects/garment_status.dart';
 import 'package:laundry_manager/presentation/providers/garment_provider.dart';
+import 'package:laundry_manager/presentation/providers/settings_provider.dart';
+import 'package:laundry_manager/presentation/providers/update_provider.dart';
 import 'package:laundry_manager/presentation/router/app_router.dart';
 import 'package:laundry_manager/presentation/widgets/garment_card_widget.dart';
+import 'package:laundry_manager/presentation/widgets/glass/glass_container.dart';
+import 'package:laundry_manager/presentation/widgets/glass/glass_scaffold.dart';
 import 'package:laundry_manager/presentation/widgets/update_banner_widget.dart';
 
 class GarmentListScreen extends ConsumerStatefulWidget {
@@ -40,37 +46,35 @@ class _GarmentListScreenState extends ConsumerState<GarmentListScreen> {
     final garmentsAsync = ref.watch(garmentNotifierProvider);
     final theme = Theme.of(context);
 
-    return Scaffold(
+    return GlassScaffold(
       drawer: const _AppDrawer(),
-      appBar: AppBar(
-        title: const Text('Laundry Manager',
-            style: TextStyle(fontWeight: FontWeight.w700)),
-      ),
+      title: const Text('Laundry Manager',
+          style: TextStyle(fontWeight: FontWeight.w700)),
       body: Column(
         children: [
           const UpdateBannerWidget(),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: TextField(
-              controller: _searchController,
-              decoration: InputDecoration(
-                hintText: 'Buscar prendas...',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: _query.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() => _query = '');
-                        },
-                      )
-                    : null,
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                filled: true,
-                contentPadding: const EdgeInsets.symmetric(vertical: 0),
+            child: GlassContainer(
+              borderRadius: BorderRadius.circular(14),
+              child: TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Buscar prendas...',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: _query.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() => _query = '');
+                          },
+                        )
+                      : null,
+                  border: InputBorder.none,
+                ),
+                onChanged: (v) => setState(() => _query = v),
               ),
-              onChanged: (v) => setState(() => _query = v),
             ),
           ),
           Expanded(
@@ -107,6 +111,11 @@ class _GarmentListScreenState extends ConsumerState<GarmentListScreen> {
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => context.push(AppRoutes.add),
+        backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.9),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
+        ),
         icon: const Icon(Icons.add),
         label: const Text('Nueva prenda'),
       ),
@@ -114,72 +123,88 @@ class _GarmentListScreenState extends ConsumerState<GarmentListScreen> {
   }
 }
 
-class _AppDrawer extends StatelessWidget {
+class _AppDrawer extends ConsumerWidget {
   const _AppDrawer();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final version = ref.watch(packageInfoProvider).whenOrNull(data: (p) => p.version);
+
     return Drawer(
-      child: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              color: theme.colorScheme.primaryContainer,
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      child: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+          child: Container(
+            color: (isDark ? Colors.black : Colors.white)
+                .withValues(alpha: isDark ? 0.55 : 0.65),
+            child: SafeArea(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.local_laundry_service,
-                      size: 40, color: theme.colorScheme.onPrimaryContainer),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: GlassContainer(
+                      blurBackground: false,
+                      padding: const EdgeInsets.all(20),
+                      opacity: isDark ? 0.3 : 0.55,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.local_laundry_service,
+                              size: 40, color: theme.colorScheme.primary),
+                          const SizedBox(height: 8),
+                          Text('Laundry Manager',
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                color: theme.colorScheme.onSurface,
+                                fontWeight: FontWeight.bold,
+                              )),
+                          Text(version != null ? 'v$version' : '',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant)),
+                        ],
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 8),
-                  Text('Laundry Manager',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: theme.colorScheme.onPrimaryContainer,
-                        fontWeight: FontWeight.bold,
-                      )),
-                  Text('v1.3.0',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onPrimaryContainer
-                              .withValues(alpha: 0.7))),
+                  ListTile(
+                    leading: const Icon(Icons.home_outlined),
+                    title: const Text('Inicio'),
+                    selected: true,
+                    onTap: () => Navigator.pop(context),
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.search),
+                    title: const Text('Buscar'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.push(AppRoutes.search);
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.label_outline),
+                    title: const Text('Categorías'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.push(AppRoutes.categories);
+                    },
+                  ),
+                  const Divider(),
+                  ListTile(
+                    leading: const Icon(Icons.settings_outlined),
+                    title: const Text('Configuración'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.push(AppRoutes.settings);
+                    },
+                  ),
                 ],
               ),
             ),
-            const SizedBox(height: 8),
-            ListTile(
-              leading: const Icon(Icons.home_outlined),
-              title: const Text('Inicio'),
-              selected: true,
-              onTap: () => Navigator.pop(context),
-            ),
-            ListTile(
-              leading: const Icon(Icons.search),
-              title: const Text('Buscar'),
-              onTap: () {
-                Navigator.pop(context);
-                context.push(AppRoutes.search);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.label_outline),
-              title: const Text('Categorías'),
-              onTap: () {
-                Navigator.pop(context);
-                context.push(AppRoutes.categories);
-              },
-            ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.settings_outlined),
-              title: const Text('Configuración'),
-              onTap: () {
-                Navigator.pop(context);
-                context.push(AppRoutes.settings);
-              },
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -202,7 +227,10 @@ class _GarmentList extends ConsumerWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (showHeader) _StatusHeader(status: garment.status),
+            if (showHeader) _StatusHeader(
+              status: garment.status,
+              count: garments.where((g) => g.status == garment.status).length,
+            ),
             GarmentCard(
               garment: garment,
               onTap: () => context.push(
@@ -210,6 +238,8 @@ class _GarmentList extends ConsumerWidget {
               onStatusChange: garment.status.nextStatus != null
                   ? () => _handleStatusChange(context, ref, garment)
                   : null,
+              onStatusSelected: (newStatus) => _handleStatusChange(
+                  context, ref, garment, overrideStatus: newStatus),
             ),
           ],
         );
@@ -218,13 +248,23 @@ class _GarmentList extends ConsumerWidget {
   }
 
   Future<void> _handleStatusChange(
-      BuildContext context, WidgetRef ref, GarmentEntity garment) async {
-    final nextStatus = garment.status.nextStatus;
+    BuildContext context,
+    WidgetRef ref,
+    GarmentEntity garment, {
+    GarmentStatus? overrideStatus,
+  }) async {
+    final nextStatus = overrideStatus ?? garment.status.nextStatus;
     if (nextStatus == null) return;
     try {
-      await ref.read(garmentNotifierProvider.notifier).updateStatus(
-        id: garment.id, from: garment.status, to: nextStatus,
-      );
+      if (overrideStatus != null) {
+        await ref.read(garmentNotifierProvider.notifier).forceUpdateStatus(
+          id: garment.id, to: nextStatus,
+        );
+      } else {
+        await ref.read(garmentNotifierProvider.notifier).updateStatus(
+          id: garment.id, from: garment.status, to: nextStatus,
+        );
+      }
     } on GarmentException catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -236,21 +276,46 @@ class _GarmentList extends ConsumerWidget {
   }
 }
 
-class _StatusHeader extends StatelessWidget {
+class _StatusHeader extends ConsumerWidget {
   final GarmentStatus status;
-  const _StatusHeader({required this.status});
+  final int count;
+  const _StatusHeader({required this.status, required this.count});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final showCounter = ref.watch(settingsProvider).showGarmentCounter;
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 16, 4),
-      child: Text(
-        status.displayLabel.toUpperCase(),
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-          fontWeight: FontWeight.w700,
-          letterSpacing: 1.2,
-          color: Theme.of(context).colorScheme.primary,
-        ),
+      child: Row(
+        children: [
+          Text(
+            status.displayLabel.toUpperCase(),
+            style: theme.textTheme.labelSmall?.copyWith(
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.2,
+              color: theme.colorScheme.primary,
+            ),
+          ),
+          if (showCounter) ...[
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                count.toString(),
+                style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.onPrimary,
+                ),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

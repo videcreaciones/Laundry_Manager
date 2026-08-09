@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:laundry_manager/presentation/providers/category_provider.dart';
+import 'package:laundry_manager/presentation/widgets/glass/glass_container.dart';
+import 'package:laundry_manager/presentation/widgets/glass/glass_scaffold.dart';
 
 class CategoriesScreen extends ConsumerWidget {
   const CategoriesScreen({super.key});
@@ -11,45 +13,54 @@ class CategoriesScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final categories = ref.watch(categoryProvider);
+    final theme = Theme.of(context);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Categorías')),
+    return GlassScaffold(
+      title: const Text('Categorías'),
       body: ListView.builder(
         padding: const EdgeInsets.only(top: 8, bottom: 80),
         itemCount: categories.length,
         itemBuilder: (_, i) {
           final cat = categories[i];
-          return ListTile(
-            leading: CircleAvatar(
-              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-              child: Text(cat.name[0].toUpperCase(),
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onPrimaryContainer,
-                    fontWeight: FontWeight.bold,
-                  )),
-            ),
-            title: Text(cat.name),
-            subtitle: cat.isDefault ? const Text('Categoría por defecto') : null,
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.edit_outlined),
-                  onPressed: () => _showEditDialog(context, ref, cat.id, cat.name),
-                ),
-                if (!cat.isDefault)
+          return GlassContainer(
+            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            blurBackground: false,
+            child: ListTile(
+              leading: CircleAvatar(
+                backgroundColor: theme.colorScheme.primaryContainer,
+                child: Text(cat.name[0].toUpperCase(),
+                    style: TextStyle(
+                      color: theme.colorScheme.onPrimaryContainer,
+                      fontWeight: FontWeight.bold,
+                    )),
+              ),
+              title: Text(cat.name),
+              subtitle: cat.isDefault ? const Text('Categoría por defecto') : null,
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
                   IconButton(
-                    icon: Icon(Icons.delete_outline,
-                        color: Theme.of(context).colorScheme.error),
-                    onPressed: () => _confirmDelete(context, ref, cat.id, cat.name),
+                    icon: const Icon(Icons.edit_outlined),
+                    onPressed: () => _showEditDialog(context, ref, cat.id, cat.name),
                   ),
-              ],
+                  if (!cat.isDefault)
+                    IconButton(
+                      icon: Icon(Icons.delete_outline, color: theme.colorScheme.error),
+                      onPressed: () => _confirmDelete(context, ref, cat.id, cat.name),
+                    ),
+                ],
+              ),
             ),
           );
         },
       ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddDialog(context, ref),
+        backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.9),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.3)),
+        ),
         icon: const Icon(Icons.add),
         label: const Text('Nueva categoría'),
       ),

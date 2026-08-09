@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:laundry_manager/domain/services/update_service.dart';
 import 'package:laundry_manager/presentation/providers/update_provider.dart';
+import 'package:laundry_manager/presentation/widgets/glass/glass_container.dart';
 
 class UpdateBannerWidget extends ConsumerWidget {
   const UpdateBannerWidget({super.key});
@@ -58,15 +59,11 @@ class _UpdateBannerState extends ConsumerState<_UpdateBanner> {
   @override
   Widget build(BuildContext context) {
     if (_dismissed) return const SizedBox.shrink();
-    final theme = Theme.of(context);
 
-    return Container(
+    return GlassContainer(
       margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.3)),
-      ),
+      borderRadius: BorderRadius.circular(14),
+      blurBackground: false,
       child: _downloading
           ? _DownloadingView(progress: _progress)
           : _AvailableView(

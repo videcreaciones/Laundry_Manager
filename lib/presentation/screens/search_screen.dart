@@ -6,8 +6,11 @@ import 'package:go_router/go_router.dart';
 import 'package:laundry_manager/domain/entities/garment_entity.dart';
 import 'package:laundry_manager/presentation/providers/category_provider.dart';
 import 'package:laundry_manager/presentation/providers/garment_provider.dart';
+import 'package:laundry_manager/presentation/providers/settings_provider.dart';
 import 'package:laundry_manager/presentation/router/app_router.dart';
 import 'package:laundry_manager/presentation/widgets/garment_card_widget.dart';
+import 'package:laundry_manager/presentation/widgets/glass/glass_container.dart';
+import 'package:laundry_manager/presentation/widgets/glass/glass_scaffold.dart';
 
 // Sentinel para filtrar prendas sin categoria
 const _kNoCategoryId = '__none__';
@@ -23,6 +26,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   final _searchController = TextEditingController();
   String _query = '';
   String? _selectedCategoryId; // null = Todos, _kNoCategoryId = Sin categoria
+  String? _selectedOwner; // solo aplica en modo empresa
 
   @override
   void dispose() {
@@ -44,7 +48,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               ? (g.categoryId == null || g.categoryId!.isEmpty)
               : g.categoryId == _selectedCategoryId;
 
-      return matchesQuery && matchesCategory;
+      // Filtro de propietario (modo empresa)
+      final matchesOwner = _selectedOwner == null ||
+          g.owner.toLowerCase() == _selectedOwner!.toLowerCase();
+
+      return matchesQuery && matchesCategory && matchesOwner;
     }).toList();
   }
 
@@ -52,37 +60,68 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   Widget build(BuildContext context) {
     final garmentsAsync = ref.watch(garmentNotifierProvider);
     final categories    = ref.watch(categoryProvider);
+    final settings      = ref.watch(settingsProvider);
     final theme         = Theme.of(context);
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Buscar prendas')),
+    final allOwners = (garmentsAsync.value ?? [])
+        .map((g) => g.owner)
+        .toSet()
+        .toList()
+      ..sort();
+
+    return GlassScaffold(
+      title: const Text('Buscar prendas'),
       body: Column(
         children: [
           // ── Barra de búsqueda ──────────────────────────────────────
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: TextField(
-              controller: _searchController,
-              autofocus: false,
-              decoration: InputDecoration(
-                hintText: 'Buscar por nombre o propietario...',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: _query.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          setState(() => _query = '');
-                        },
-                      )
-                    : null,
-                border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12)),
-                filled: true,
+            child: GlassContainer(
+              borderRadius: BorderRadius.circular(14),
+              child: TextField(
+                controller: _searchController,
+                autofocus: false,
+                decoration: InputDecoration(
+                  hintText: 'Buscar por nombre o propietario...',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: _query.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() => _query = '');
+                          },
+                        )
+                      : null,
+                  border: InputBorder.none,
+                ),
+                onChanged: (v) => setState(() => _query = v),
               ),
-              onChanged: (v) => setState(() => _query = v),
             ),
           ),
+
+          // ── Chips de propietario (solo en modo empresa) ────────────
+          if (settings.companyMode && allOwners.isNotEmpty)
+            SizedBox(
+              height: 48,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                children: [
+                  _CategoryChip(
+                    label: 'Todos',
+                    selected: _selectedOwner == null,
+                    onTap: () => setState(() => _selectedOwner = null),
+                  ),
+                  ...allOwners.map((owner) => _CategoryChip(
+                    label: owner,
+                    selected: _selectedOwner == owner,
+                    onTap: () => setState(() =>
+                        _selectedOwner = _selectedOwner == owner ? null : owner),
+                  )),
+                ],
+              ),
+            ),
 
           // ── Chips de categoría ─────────────────────────────────────
           SizedBox(
@@ -127,7 +166,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               data: (garments) {
                 final filtered = _filtered(garments);
 
-                if (_query.isEmpty && _selectedCategoryId == null) {
+                if (_query.isEmpty &&
+                    _selectedCategoryId == null &&
+                    _selectedOwner == null) {
                   return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -135,9 +176,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         Icon(Icons.search, size: 64,
                             color: theme.colorScheme.outlineVariant),
                         const SizedBox(height: 12),
-                        Text('Escribe o selecciona una categoría',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                                color: theme.colorScheme.onSurfaceVariant)),
+                        Text(
+                          settings.companyMode
+                              ? 'Escribe o filtra por usuario o categoría'
+                              : 'Escribe o selecciona una categoría',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.onSurfaceVariant),
+                        ),
                       ],
                     ),
                   );

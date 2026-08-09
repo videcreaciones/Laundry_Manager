@@ -1,7 +1,7 @@
 ﻿name: laundry_manager
 description: "Gestion profesional del ciclo de vida de prendas de lavanderia."
 publish_to: "none"
-version: 1.4.0+6
+version: 1.4.1+7
 
 environment:
   sdk: ">=3.3.0 <4.0.0"

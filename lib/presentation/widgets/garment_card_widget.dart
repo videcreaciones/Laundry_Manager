@@ -7,8 +7,11 @@ library;
 
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:laundry_manager/domain/entities/garment_entity.dart';
 import 'package:laundry_manager/domain/value_objects/garment_status.dart';
+import 'package:laundry_manager/presentation/providers/settings_provider.dart';
+import 'package:laundry_manager/presentation/widgets/glass/glass_container.dart';
 
 /// Colores asociados a cada estado para feedback visual inmediato.
 extension _StatusColor on GarmentStatus {
@@ -32,75 +35,137 @@ extension _StatusColor on GarmentStatus {
 }
 
 /// Tarjeta que representa una prenda en la lista principal.
-class GarmentCard extends StatelessWidget {
+class GarmentCard extends ConsumerWidget {
   final GarmentEntity garment;
   final VoidCallback onTap;
   final VoidCallback? onStatusChange;
+  final void Function(GarmentStatus)? onStatusSelected;
 
   const GarmentCard({
     super.key,
     required this.garment,
     required this.onTap,
     this.onStatusChange,
+    this.onStatusSelected,
   });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final useSelector = ref.watch(settingsProvider).useStatusSelector;
+
+    return GlassContainer(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      borderRadius: BorderRadius.circular(18),
+      blurBackground: false,
+      opacity: theme.brightness == Brightness.dark ? 0.35 : 0.6,
+      child: Material(
+        type: MaterialType.transparency,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(18),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                // ── Foto o placeholder ──────────────────────────────────
+                _GarmentThumbnail(imagePath: garment.imagePath),
+                const SizedBox(width: 12),
+
+                // ── Datos principales ─────────────────────────────────
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        garment.name,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        garment.owner,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      _StatusChip(status: garment.status),
+                    ],
+                  ),
+                ),
+
+                // ── Botón de acción rápida ────────────────────────────
+                if (useSelector)
+                  _StatusDropdownButton(
+                    garment: garment,
+                    onSelected: onStatusSelected,
+                  )
+                else if (onStatusChange != null &&
+                    garment.status.nextStatus != null)
+                  IconButton(
+                    onPressed: onStatusChange,
+                    icon: const Icon(Icons.arrow_forward_ios_rounded),
+                    iconSize: 18,
+                    tooltip: garment.status.actionLabel,
+                    color: theme.colorScheme.primary,
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Botón que abre un menú desplegable con los 3 estados (selector libre).
+class _StatusDropdownButton extends StatelessWidget {
+  final GarmentEntity garment;
+  final void Function(GarmentStatus)? onSelected;
+
+  const _StatusDropdownButton({required this.garment, this.onSelected});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
+    return PopupMenuButton<GarmentStatus>(
+      tooltip: 'Cambiar estado',
+      icon: Icon(Icons.swap_vert_rounded, color: theme.colorScheme.primary, size: 22),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      onSelected: (newStatus) => onSelected?.call(newStatus),
+      itemBuilder: (_) => GarmentStatus.values.map((status) {
+        final isCurrent = status == garment.status;
+        return PopupMenuItem<GarmentStatus>(
+          value: status,
+          enabled: !isCurrent,
           child: Row(
             children: [
-              // ── Foto o placeholder ──────────────────────────────────────
-              _GarmentThumbnail(imagePath: garment.imagePath),
-              const SizedBox(width: 12),
-
-              // ── Datos principales ───────────────────────────────────────
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      garment.name,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      garment.owner,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    _StatusChip(status: garment.status),
-                  ],
+              Icon(
+                status.statusIcon,
+                size: 18,
+                color: isCurrent ? theme.colorScheme.primary : theme.colorScheme.onSurface,
+              ),
+              const SizedBox(width: 10),
+              Text(
+                status.displayLabel,
+                style: TextStyle(
+                  fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
+                  color: isCurrent ? theme.colorScheme.primary : theme.colorScheme.onSurface,
                 ),
               ),
-
-              // ── Botón de acción rápida ──────────────────────────────────
-              if (onStatusChange != null &&
-                  garment.status.nextStatus != null)
-                IconButton(
-                  onPressed: onStatusChange,
-                  icon: const Icon(Icons.arrow_forward_ios_rounded),
-                  iconSize: 18,
-                  tooltip: garment.status.actionLabel,
-                  color: theme.colorScheme.primary,
-                ),
+              if (isCurrent) ...[
+                const Spacer(),
+                Icon(Icons.check, size: 16, color: theme.colorScheme.primary),
+              ],
             ],
           ),
-        ),
-      ),
+        );
+      }).toList(),
     );
   }
 }
@@ -159,8 +224,9 @@ class _StatusChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: status.chipColor,
+        color: status.chipColor.withValues(alpha: 0.75),
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: status.chipTextColor.withValues(alpha: 0.25)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

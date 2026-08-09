@@ -9,8 +9,12 @@ import 'package:laundry_manager/presentation/providers/category_provider.dart';
 import 'package:laundry_manager/presentation/providers/garment_provider.dart';
 import 'package:laundry_manager/presentation/router/app_router.dart';
 import 'package:laundry_manager/presentation/providers/image_picker_provider.dart';
+import 'package:laundry_manager/presentation/providers/settings_provider.dart';
+import 'package:laundry_manager/presentation/widgets/glass/glass_container.dart';
+import 'package:laundry_manager/presentation/widgets/glass/glass_scaffold.dart';
 import 'package:laundry_manager/presentation/widgets/image_preview_widget.dart';
 import 'package:laundry_manager/presentation/widgets/status_action_button.dart';
+import 'package:laundry_manager/presentation/widgets/status_selector_widget.dart';
 
 class GarmentDetailScreen extends ConsumerStatefulWidget {
   final GarmentEntity garment;
@@ -67,6 +71,45 @@ class _GarmentDetailScreenState extends ConsumerState<GarmentDetailScreen> {
     }
   }
 
+  Future<void> _handleStatusChangeTo(GarmentStatus to) async {
+    final garment = _currentGarment;
+    setState(() => _isUpdating = true);
+    try {
+      await ref.read(garmentNotifierProvider.notifier).forceUpdateStatus(
+        id: garment.id, to: to,
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Estado actualizado a "${to.displayLabel}"')),
+        );
+      }
+    } on GarmentException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.userMessage),
+              backgroundColor: Theme.of(context).colorScheme.error),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isUpdating = false);
+    }
+  }
+
+  Widget _buildStatusControl(GarmentEntity garment, bool useSelector) {
+    if (useSelector) {
+      return StatusSelectorWidget(
+        currentStatus: garment.status,
+        isLoading: _isUpdating,
+        onSelected: _handleStatusChangeTo,
+      );
+    }
+    return StatusActionButton(
+      currentStatus: garment.status,
+      isLoading: _isUpdating,
+      onPressed: _handleStatusChange,
+    );
+  }
+
   Future<void> _handleDelete() async {
     final garment = _currentGarment;
     if (garment.status == GarmentStatus.lavando) {
@@ -114,30 +157,29 @@ class _GarmentDetailScreenState extends ConsumerState<GarmentDetailScreen> {
   Widget build(BuildContext context) {
     final garment = _currentGarment;
     final theme = Theme.of(context);
+    final useSelector = ref.watch(settingsProvider).useStatusSelector;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(garment.name, overflow: TextOverflow.ellipsis),
-        actions: [
-          // Botón editar — siempre visible
-          IconButton(
-            icon: const Icon(Icons.edit_outlined),
-            tooltip: 'Editar prenda',
-            onPressed: () => context.push(
-              AppRoutes.editPath(garment.id),
-              extra: garment,
-            ),
+    return GlassScaffold(
+      title: Text(garment.name, overflow: TextOverflow.ellipsis),
+      actions: [
+        // Botón editar — siempre visible
+        IconButton(
+          icon: const Icon(Icons.edit_outlined),
+          tooltip: 'Editar prenda',
+          onPressed: () => context.push(
+            AppRoutes.editPath(garment.id),
+            extra: garment,
           ),
-          // Botón borrar — solo si no está en LAVANDO
-          if (garment.status != GarmentStatus.lavando)
-            IconButton(
-              icon: const Icon(Icons.delete_outline),
-              tooltip: 'Eliminar prenda',
-              color: theme.colorScheme.error,
-              onPressed: _handleDelete,
-            ),
-        ],
-      ),
+        ),
+        // Botón borrar — solo si no está en LAVANDO
+        if (garment.status != GarmentStatus.lavando)
+          IconButton(
+            icon: const Icon(Icons.delete_outline),
+            tooltip: 'Eliminar prenda',
+            color: theme.colorScheme.error,
+            onPressed: _handleDelete,
+          ),
+      ],
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -145,21 +187,26 @@ class _GarmentDetailScreenState extends ConsumerState<GarmentDetailScreen> {
           children: [
             ImagePreviewWidget(existingImagePath: garment.imagePath),
             const SizedBox(height: 24),
-            _InfoTile(icon: Icons.checkroom_outlined, label: 'Prenda', value: garment.name),
-            _InfoTile(icon: Icons.person_outline, label: 'Propietario', value: garment.owner),
-            _InfoTile(icon: Icons.flag_outlined, label: 'Estado actual', value: garment.status.displayLabel),
-            _CategoryInfoTile(categoryId: garment.categoryId),
-            if (garment.notes != null && garment.notes!.isNotEmpty)
-              _InfoTile(icon: Icons.notes_outlined, label: 'Notas', value: garment.notes!),
-            _InfoTile(icon: Icons.calendar_today_outlined, label: 'Registrada el', value: _formatDate(garment.createdAt)),
-            if (garment.updatedAt != garment.createdAt)
-              _InfoTile(icon: Icons.update_outlined, label: 'Última actualización', value: _formatDate(garment.updatedAt)),
-            const SizedBox(height: 32),
-            StatusActionButton(
-              currentStatus: garment.status,
-              isLoading: _isUpdating,
-              onPressed: _handleStatusChange,
+            GlassContainer(
+              blurBackground: false,
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _InfoTile(icon: Icons.checkroom_outlined, label: 'Prenda', value: garment.name),
+                  _InfoTile(icon: Icons.person_outline, label: 'Propietario', value: garment.owner),
+                  _InfoTile(icon: Icons.flag_outlined, label: 'Estado actual', value: garment.status.displayLabel),
+                  _CategoryInfoTile(categoryId: garment.categoryId),
+                  if (garment.notes != null && garment.notes!.isNotEmpty)
+                    _InfoTile(icon: Icons.notes_outlined, label: 'Notas', value: garment.notes!),
+                  _InfoTile(icon: Icons.calendar_today_outlined, label: 'Registrada el', value: _formatDate(garment.createdAt)),
+                  if (garment.updatedAt != garment.createdAt)
+                    _InfoTile(icon: Icons.update_outlined, label: 'Última actualización', value: _formatDate(garment.updatedAt)),
+                ],
+              ),
             ),
+            const SizedBox(height: 32),
+            _buildStatusControl(garment, useSelector),
           ],
         ),
       ),
