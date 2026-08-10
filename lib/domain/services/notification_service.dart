@@ -38,10 +38,13 @@ class NotificationService {
       },
     );
 
-    await _plugin
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.requestNotificationsPermission();
+    final androidPlugin = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    await androidPlugin?.requestNotificationsPermission();
+    // Sin esto el recordatorio puede sonar con varios minutos de margen
+    // (modo inexacto). Android 12+ requiere que el usuario autorice esto
+    // explicitamente para poder agendar alarmas a la hora exacta.
+    await androidPlugin?.requestExactAlarmsPermission();
   }
 
   /// Si la app se abrio directamente al tocar una notificacion (estaba
@@ -68,6 +71,18 @@ class NotificationService {
     );
     const details = NotificationDetails(android: androidDetails);
 
+    // Si el usuario no autorizo alarmas exactas (o el plugin no expone la
+    // consulta, ej. en versiones viejas de Android), cae a inexacto en vez
+    // de tirar una SecurityException al agendar.
+    final canScheduleExact = await _plugin
+            .resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin>()
+            ?.canScheduleExactNotifications() ??
+        false;
+    final scheduleMode = canScheduleExact
+        ? AndroidScheduleMode.exactAllowWhileIdle
+        : AndroidScheduleMode.inexactAllowWhileIdle;
+
     try {
       await _plugin.zonedSchedule(
         _notificationId(garmentId),
@@ -77,10 +92,7 @@ class NotificationService {
         details,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
-        // Inexacto: no requiere el permiso especial de alarmas exactas de
-        // Android 12+, tolera algunos minutos de margen — de sobra para un
-        // recordatorio de lavado.
-        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        androidScheduleMode: scheduleMode,
         matchDateTimeComponents:
             reminder.type == WashReminderType.monthlyOnDay
                 ? DateTimeComponents.dayOfMonthAndTime
