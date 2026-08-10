@@ -44,9 +44,13 @@ class _ReminderSheetState extends State<_ReminderSheet> {
   void initState() {
     super.initState();
     final current = widget.current;
+    final now = TimeOfDay.now();
     _type  = current?.type ?? WashReminderType.everyNDays;
-    _value = current?.value ?? 7;
-    _time  = TimeOfDay(hour: current?.hour ?? 9, minute: current?.minute ?? 0);
+    _value = current?.value ?? DateTime.now().day;
+    _time  = TimeOfDay(
+      hour: current?.hour ?? now.hour,
+      minute: current?.minute ?? now.minute,
+    );
   }
 
   @override
@@ -125,6 +129,15 @@ class _ReminderSheetState extends State<_ReminderSheet> {
                         if (picked != null) setState(() => _time = picked);
                       },
                     ),
+                    Padding(
+                      padding: const EdgeInsets.only(left: 40),
+                      child: Text(
+                        'Hoy: ${_formatToday()}',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ),
                     const SizedBox(height: 20),
                     Row(
                       children: [
@@ -159,6 +172,13 @@ class _ReminderSheetState extends State<_ReminderSheet> {
         ),
       ),
     );
+  }
+
+  String _formatToday() {
+    final now = DateTime.now();
+    return '${now.day.toString().padLeft(2, '0')}/'
+        '${now.month.toString().padLeft(2, '0')}/'
+        '${now.year}';
   }
 }
 
