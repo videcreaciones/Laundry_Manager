@@ -1,4 +1,4 @@
-﻿library;
+library;
 
 import 'dart:ui';
 
@@ -14,7 +14,6 @@ import 'package:laundry_manager/presentation/router/app_router.dart';
 import 'package:laundry_manager/presentation/widgets/garment_card_widget.dart';
 import 'package:laundry_manager/presentation/widgets/glass/glass_container.dart';
 import 'package:laundry_manager/presentation/widgets/glass/glass_scaffold.dart';
-import 'package:laundry_manager/presentation/widgets/update_banner_widget.dart';
 
 class GarmentListScreen extends ConsumerStatefulWidget {
   const GarmentListScreen({super.key});
@@ -52,7 +51,6 @@ class _GarmentListScreenState extends ConsumerState<GarmentListScreen> {
           style: TextStyle(fontWeight: FontWeight.w700)),
       body: Column(
         children: [
-          const UpdateBannerWidget(),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             child: GlassContainer(
