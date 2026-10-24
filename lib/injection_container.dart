@@ -13,6 +13,7 @@ library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:laundry_manager/data/datasources/garment_image_storage.dart';
 import 'package:laundry_manager/data/datasources/hive_garment_datasource.dart';
 import 'package:laundry_manager/data/mappers/garment_mapper.dart';
 import 'package:laundry_manager/data/models/garment_model.dart';
@@ -33,6 +34,14 @@ final hiveBoxProvider = Provider<Box<GarmentModel>>(
     'hiveBoxProvider debe ser sobreescrito en ProviderScope con el box abierto.',
   ),
   name: 'hiveBoxProvider',
+);
+
+/// Carpeta permanente de fotos. Se sobreescribe en [main.dart] con su ruta real.
+final garmentImageStorageProvider = Provider<GarmentImageStorage>(
+  (ref) => throw UnimplementedError(
+    'garmentImageStorageProvider debe ser sobreescrito en ProviderScope.',
+  ),
+  name: 'garmentImageStorageProvider',
 );
 
 /// Mapper bidireccional â€” sin estado, singleton.

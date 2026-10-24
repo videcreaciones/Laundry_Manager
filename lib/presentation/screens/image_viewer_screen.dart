@@ -29,7 +29,14 @@ class ImageViewerScreen extends StatelessWidget {
                 tag: heroTag,
                 child: InteractiveViewer(
                   maxScale: 5,
-                  child: Image.file(File(imagePath)),
+                  child: Image.file(
+                    File(imagePath),
+                    errorBuilder: (_, __, ___) => const Icon(
+                      Icons.broken_image_outlined,
+                      color: Colors.white54,
+                      size: 64,
+                    ),
+                  ),
                 ),
               ),
             ),

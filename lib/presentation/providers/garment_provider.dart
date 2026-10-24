@@ -1,5 +1,7 @@
 ﻿library;
 
+import 'dart:io';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:laundry_manager/domain/entities/garment_entity.dart';
 import 'package:laundry_manager/domain/value_objects/garment_failure.dart';
@@ -60,12 +62,17 @@ class GarmentNotifier extends AsyncNotifier<List<GarmentEntity>> {
     String? notes,
     String? categoryId,
   }) async {
+    final images = ref.read(garmentImageStorageProvider);
+    final storedPath = await _persistImage(imagePath);
     final result = await ref
         .read(saveGarmentUseCaseProvider)
-        .execute(name: name, owner: owner, imagePath: imagePath, notes: notes, categoryId: categoryId);
-    result.fold(
-      (failure) => throw GarmentException(failure),
-      (newEntity) {
+        .execute(name: name, owner: owner, imagePath: storedPath, notes: notes, categoryId: categoryId);
+    await result.fold(
+      (failure) async {
+        if (storedPath != imagePath) await images.delete(storedPath);
+        throw GarmentException(failure);
+      },
+      (newEntity) async {
         final current = state.value ?? [];
         state = AsyncData(_sorted([newEntity, ...current]));
       },
@@ -124,13 +131,20 @@ class GarmentNotifier extends AsyncNotifier<List<GarmentEntity>> {
     String? notes,
     String? categoryId,
   }) async {
+    final images = ref.read(garmentImageStorageProvider);
+    final storedPath = await _persistImage(imagePath);
     final result = await ref.read(updateGarmentUseCaseProvider).execute(
       original: original, name: name, owner: owner,
-      imagePath: imagePath, notes: notes, categoryId: categoryId,
+      imagePath: storedPath, notes: notes, categoryId: categoryId,
     );
-    result.fold(
-      (failure) => throw GarmentException(failure),
-      (updated) {
+    await result.fold(
+      (failure) async {
+        if (storedPath != original.imagePath) await images.delete(storedPath);
+        throw GarmentException(failure);
+      },
+      (updated) async {
+        // La foto anterior ya no la usa nadie: se borra para no dejar restos.
+        if (original.imagePath != storedPath) await images.delete(original.imagePath);
         final current = state.value ?? [];
         state = AsyncData(_sorted(
           current.map((e) => e.id == updated.id ? updated : e).toList(),
@@ -144,19 +158,34 @@ class GarmentNotifier extends AsyncNotifier<List<GarmentEntity>> {
     required GarmentStatus currentStatus,
   }) async {
     final previous = state;
+    final imagePath = (state.value ?? [])
+        .where((e) => e.id == id)
+        .map((e) => e.imagePath)
+        .firstOrNull;
     state = AsyncData(
       (state.value ?? []).where((e) => e.id != id).toList(),
     );
     final result = await ref
         .read(deleteGarmentUseCaseProvider)
         .execute(id: id, currentStatus: currentStatus);
-    result.fold(
-      (failure) {
+    await result.fold(
+      (failure) async {
         state = previous;
         throw GarmentException(failure);
       },
-      (_) {},
+      (_) => ref.read(garmentImageStorageProvider).delete(imagePath),
     );
+  }
+
+  /// Copia la foto a la carpeta permanente; si falla, se informa al usuario.
+  Future<String?> _persistImage(String? imagePath) async {
+    try {
+      return await ref.read(garmentImageStorageProvider).persist(imagePath);
+    } on FileSystemException catch (e) {
+      throw GarmentException(
+        GarmentFailureStorageError('No se pudo guardar la foto (${e.message}).'),
+      );
+    }
   }
 }
 

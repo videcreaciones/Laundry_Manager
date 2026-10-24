@@ -1,13 +1,17 @@
 ﻿library;
 
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:laundry_manager/data/datasources/garment_image_storage.dart';
 import 'package:laundry_manager/data/models/garment_model.dart';
 import 'package:laundry_manager/injection_container.dart';
 import 'package:laundry_manager/presentation/providers/category_provider.dart';
 import 'package:laundry_manager/presentation/providers/settings_provider.dart';
 import 'package:laundry_manager/presentation/router/app_router.dart';
+import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 void main() async {
@@ -23,19 +27,39 @@ void main() async {
   try {
     garmentBox = await Hive.openBox<GarmentModel>(kGarmentBoxName);
   } catch (_) {
-    await Hive.deleteBoxFromDisk(kGarmentBoxName);
+    // No se borran las prendas: el archivo que no abre se aparta con otro
+    // nombre para poder recuperarlo, y se empieza con una base nueva.
+    await _setAsideBoxFile(appDocDir.path, kGarmentBoxName);
     garmentBox = await Hive.openBox<GarmentModel>(kGarmentBoxName);
   }
 
   await Hive.openBox(kCategoryBoxName);
   await Hive.openBox(kSettingsBoxName);
 
+  final imageStorage = GarmentImageStorage(
+    Directory(p.join(appDocDir.path, 'garment_images')),
+  );
+
   runApp(
     ProviderScope(
-      overrides: [hiveBoxProvider.overrideWithValue(garmentBox)],
+      overrides: [
+        hiveBoxProvider.overrideWithValue(garmentBox),
+        garmentImageStorageProvider.overrideWithValue(imageStorage),
+      ],
       child: const LaundryManagerApp(),
     ),
   );
+}
+
+/// Renombra `<box>.hive` a `<box>.hive.danado-<fecha>` y quita su `.lock`.
+Future<void> _setAsideBoxFile(String dir, String boxName) async {
+  final stamp = DateTime.now().millisecondsSinceEpoch;
+  final boxFile = File(p.join(dir, '${boxName.toLowerCase()}.hive'));
+  if (await boxFile.exists()) {
+    await boxFile.rename('${boxFile.path}.danado-$stamp');
+  }
+  final lockFile = File(p.join(dir, '${boxName.toLowerCase()}.lock'));
+  if (await lockFile.exists()) await lockFile.delete();
 }
 
 class LaundryManagerApp extends ConsumerWidget {
