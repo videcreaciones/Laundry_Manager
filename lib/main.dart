@@ -23,15 +23,7 @@ void main() async {
     Hive.registerAdapter(GarmentModelAdapter());
   }
 
-  late final Box<GarmentModel> garmentBox;
-  try {
-    garmentBox = await Hive.openBox<GarmentModel>(kGarmentBoxName);
-  } catch (_) {
-    // No se borran las prendas: el archivo que no abre se aparta con otro
-    // nombre para poder recuperarlo, y se empieza con una base nueva.
-    await _setAsideBoxFile(appDocDir.path, kGarmentBoxName);
-    garmentBox = await Hive.openBox<GarmentModel>(kGarmentBoxName);
-  }
+  final garmentBox = await _openGarmentBoxSafely(appDocDir.path);
 
   await Hive.openBox(kCategoryBoxName);
   await Hive.openBox(kSettingsBoxName);
@@ -51,15 +43,44 @@ void main() async {
   );
 }
 
-/// Renombra `<box>.hive` a `<box>.hive.danado-<fecha>` y quita su `.lock`.
-Future<void> _setAsideBoxFile(String dir, String boxName) async {
-  final stamp = DateTime.now().millisecondsSinceEpoch;
-  final boxFile = File(p.join(dir, '${boxName.toLowerCase()}.hive'));
-  if (await boxFile.exists()) {
-    await boxFile.rename('${boxFile.path}.danado-$stamp');
+/// Abre la base de prendas sin perderlas si el archivo está dañado.
+///
+/// Hive no falla con un archivo dañado: lo recorta en silencio hasta la última
+/// entrada válida, a veces a 0 bytes. Por eso se copia antes de abrirlo y, si
+/// Hive lo achica o no logra abrirlo, la copia se conserva como
+/// `garments.hive.danado-<fecha>` para poder recuperar las prendas.
+Future<Box<GarmentModel>> _openGarmentBoxSafely(String dir) async {
+  final boxFile = File(p.join(dir, '${kGarmentBoxName.toLowerCase()}.hive'));
+  final copy = File('${boxFile.path}.previo');
+  final sizeBefore = await boxFile.exists() ? await boxFile.length() : 0;
+  if (sizeBefore > 0) {
+    try {
+      await boxFile.copy(copy.path);
+    } on FileSystemException {
+      // Sin espacio para la copia: se abre igual para no bloquear la app.
+    }
   }
-  final lockFile = File(p.join(dir, '${boxName.toLowerCase()}.lock'));
-  if (await lockFile.exists()) await lockFile.delete();
+
+  Future<void> keepCopy() async {
+    if (await copy.exists()) {
+      final stamp = DateTime.now().millisecondsSinceEpoch;
+      await copy.rename('${boxFile.path}.danado-$stamp');
+    }
+  }
+
+  try {
+    final box = await Hive.openBox<GarmentModel>(kGarmentBoxName);
+    if (await boxFile.length() < sizeBefore) {
+      await keepCopy();
+    } else if (await copy.exists()) {
+      await copy.delete();
+    }
+    return box;
+  } catch (_) {
+    await keepCopy();
+    await Hive.deleteBoxFromDisk(kGarmentBoxName);
+    return Hive.openBox<GarmentModel>(kGarmentBoxName);
+  }
 }
 
 class LaundryManagerApp extends ConsumerWidget {
