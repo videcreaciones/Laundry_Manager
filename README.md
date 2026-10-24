@@ -37,7 +37,7 @@ Las versiones antiguas en APK siguen disponibles en **[Releases](../../releases)
 
 ## 🔒 Privacidad
 
-La app no recopila ni envía ningún dato: todo queda en tu teléfono. Lee la **[política de privacidad](privacy_policy.md)**.
+La app no recopila ni envía ningún dato: todo queda en tu teléfono. Lee la **[política de privacidad](privacy_policy.md)** y los **[términos de uso](terminos_de_uso.md)**.
 
 ## 🛠️ Stack técnico
 

@@ -278,6 +278,32 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
                   ),
                 ),
               ),
+              const SizedBox(height: 8),
+              GlassContainer(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                blurBackground: false,
+                child: ListTile(
+                  leading: Icon(Icons.gavel_outlined,
+                      color: theme.colorScheme.primary),
+                  title: const Text('Privacidad y licencias'),
+                  subtitle: const Text(
+                      'Tus datos no salen del teléfono. Licencias de software de terceros'),
+                  trailing: const Icon(Icons.chevron_right),
+                  // Muestra los avisos de licencia que exigen las librerías
+                  // de código abierto (MIT, BSD, Apache) incluidas en la app.
+                  onTap: () => showLicensePage(
+                    context: context,
+                    applicationName: 'Laundry Manager',
+                    applicationVersion: version,
+                    applicationLegalese:
+                        '© 2026 Salomon Jarro (Videcreaciones)\n\n'
+                        'Laundry Manager no recopila ni envía datos: todo se guarda '
+                        'solo en este teléfono.\n\n'
+                        'Política de privacidad y términos de uso:\n'
+                        'github.com/videcreaciones/Laundry_Manager',
+                  ),
+                ),
+              ),
             ],
           ),
 
