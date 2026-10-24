@@ -29,11 +29,15 @@ Todo funciona **sin conexión a internet**. Tus datos se guardan localmente en t
 
 ## 📥 Descarga
 
-Puedes descargar el APK más reciente directamente desde la sección de **[Releases](../../releases/latest)** de este repositorio. Solo descarga el archivo `.apk`, ábrelo en tu Android y acepta la instalación.
+Laundry Manager está disponible en **[Google Play](https://play.google.com/store/apps/details?id=com.videcreaciones.laundry_manager)**. Desde Play recibirás las actualizaciones automáticamente, como cualquier otra app.
 
-> Si tu teléfono te pregunta si confías en la fuente, ve a **Ajustes → Seguridad → Permitir fuentes desconocidas** y vuelve a intentarlo.
+> **¿Tenías instalada una versión descargada desde GitHub?** La versión de Play es una app distinta, así que no reemplaza a la anterior. Si quieres conservar tus prendas, sigue usando la versión antigua hasta pasarlas, y luego desinstálala.
 
-La app se actualiza automáticamente — cuando haya una nueva versión te aparecerá un aviso dentro de la app para instalarla con un solo toque.
+Las versiones antiguas en APK siguen disponibles en **[Releases](../../releases)**, pero ya no se actualizan.
+
+## 🔒 Privacidad
+
+La app no recopila ni envía ningún dato: todo queda en tu teléfono. Lee la **[política de privacidad](privacy_policy.md)**.
 
 ## 🛠️ Stack técnico
 
